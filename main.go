@@ -16,14 +16,44 @@ func main() {
 	addressPort := 3002
 	address := addressHost + ":" + strconv.Itoa(addressPort)
 
-	n := connNet(network, address)
+	n, _ := connNet(network, address)
 	for {
 		fmt.Printf("%v", <-n)
 	}
 }
 
-func connNet(network string, address string) <-chan []byte {
+//var out, in chan []byte
+
+type optoLinkState int
+
+const (
+	dead optoLinkState = iota
+	unknwn
+	gwg
+	kw
+	kwInit
+	kwIdle
+	kwSync
+	kwSend
+	kwRecv
+	p300
+	eot
+	ack
+	nack
+	sync
+)
+
+type optLink struct {
+	rx    <-chan []byte
+	tx    chan<- []byte
+	state optoLinkState
+	close bool
+	error error
+}
+
+func connNet(network string, address string) (<-chan []byte, chan<- []byte) {
 	out := make(chan []byte)
+	in := make(chan []byte)
 	b := make([]byte, 1)
 
 	go func() {
@@ -55,7 +85,7 @@ func connNet(network string, address string) <-chan []byte {
 				conn.Write([]byte("\x04"))
 			case stateConnected:
 				start = t
-				n, err = conn.Read(b[0:])
+				n, err = conn.Read(b)
 				if err != nil {
 					if err == io.EOF {
 						log.Printf("ERR: %v (possibly connection timeout, reconnect)\n", err)
@@ -84,9 +114,10 @@ func connNet(network string, address string) <-chan []byte {
 			}
 		}
 	}()
-	return out
+	return out, in
 }
 
+/*
 func fsm() {
 	const (
 		dead = iota
@@ -106,7 +137,4 @@ func fsm() {
 		sync
 	)
 }
-
-/*
-
- */
+*/
