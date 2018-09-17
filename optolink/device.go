@@ -1,6 +1,7 @@
 package optolink
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"net"
@@ -25,6 +26,7 @@ const (
 // Device is the basic ReadWriteCloser representation of a physical Optolink device
 type Device struct {
 	conn io.ReadWriteCloser
+	r    *bufio.Reader
 	sync.Mutex
 
 	connected bool
@@ -45,6 +47,7 @@ func (o *Device) Close() error {
 	case <-o.done:
 		return fmt.Errorf("Close failed: Closing")
 	default:
+		o.r.Reset(o.conn) // TODO: check if useful
 		err = o.conn.Close()
 	}
 
@@ -65,7 +68,37 @@ func (o *Device) Read(b []byte) (int, error) {
 	case <-o.done:
 		return 0, fmt.Errorf("Read failed: Closing")
 	default:
-		return o.conn.Read(b)
+		return o.r.Read(b)
+	}
+}
+
+// ReadByte reads and returns a single byte. If no byte is available, returns an error.
+func (o *Device) ReadByte() (byte, error) {
+	o.Lock()
+	defer o.Unlock()
+	if o.connected == false {
+		return 0, fmt.Errorf("ReadByte failed: Not connected")
+	}
+	select {
+	case <-o.done:
+		return 0, fmt.Errorf("ReadByte failed: Closing")
+	default:
+		return o.r.ReadByte()
+	}
+}
+
+// Peek returns the next n bytes without advancing the reader.
+func (o *Device) Peek(n int) ([]byte, error) {
+	o.Lock()
+	defer o.Unlock()
+	if o.connected == false {
+		return nil, fmt.Errorf("Peek failed: Not connected")
+	}
+	select {
+	case <-o.done:
+		return nil, fmt.Errorf("Peek failed: Closing")
+	default:
+		return o.r.Peek(n)
 	}
 }
 
@@ -104,21 +137,20 @@ func (o *Device) Connect(link string) error {
 		}
 		o.conn.(*net.TCPConn).SetKeepAlive(true)
 		o.conn.(*net.TCPConn).SetKeepAlivePeriod(30 * time.Second)
-		o.connected = true
-		o.done = make(chan struct{})
-		return nil
 	} else if (u.Scheme == "file") || (u.Scheme == "") {
 		// Connect via serial
 		o.conn, err = serial.OpenPort(&serial.Config{Name: u.Path, Baud: 4800, Size: 8, Parity: serial.ParityNone, StopBits: serial.Stop2})
 		if err != nil {
 			return err
 		}
-		o.connected = true
-		o.done = make(chan struct{})
-		return nil
 	} else {
 		o.connected = false
 		close(o.done)
 		return fmt.Errorf("Can not find a valid connection string in \"%v\"", link)
 	}
+	o.connected = true
+	o.done = make(chan struct{})
+	o.r = bufio.NewReader(o.conn)
+
+	return nil
 }
