@@ -3,55 +3,66 @@ package main
 import (
 	"fmt"
 	"io"
-	"log"
-	"net"
 	"strconv"
 	"time"
+
+	"./optolink"
 	//"github.com/tarm/serial"
+	log "github.com/sirupsen/logrus"
 )
 
+func init() {
+	log.SetLevel(log.DebugLevel)
+}
+
 func main() {
-	network := "tcp"
 	addressHost := "orangepipc"
 	addressPort := 3002
 	address := addressHost + ":" + strconv.Itoa(addressPort)
 
-	n, _ := connNet(network, address)
-	for {
-		fmt.Printf("%v", <-n)
+	if false {
+		n, _ := connNet("socket://" + address)
+		for {
+			fmt.Printf("%v", <-n)
+		}
+	} else {
+		/*
+			conn, err := net.Dial("tcp", address)
+			if err != nil {
+				panic("Uhh")
+			}
+		*/
+		conn := &optolink.Device{}
+		conn.Connect("socket://" + address)
+		/*
+		           b := []byte{}
+		   		for {
+		   			n, _ := conn.Read(b)
+		   			if n > 0 {
+		   				fmt.Printf("%v ", b)
+		   			}
+		   		}
+		*/
+		optolink.VitoFsm(conn)
+
+		/*
+			        // test, works,
+					var conn optolink.Device
+					var err error
+					err = conn.Connect("socket://" + address)
+					if err != nil {
+						log.Printf("(TODO:) ERR: %v", err)
+					}
+					b := make([]byte, 1) //TODO: why???
+					for {
+						n, _ := conn.Read(b)
+						fmt.Printf("Read n=%v: %v ", n, b)
+					}
+		*/
 	}
 }
 
-//var out, in chan []byte
-
-type optoLinkState int
-
-const (
-	dead optoLinkState = iota
-	unknwn
-	gwg
-	kw
-	kwInit
-	kwIdle
-	kwSync
-	kwSend
-	kwRecv
-	p300
-	eot
-	ack
-	nack
-	sync
-)
-
-type optLink struct {
-	rx    <-chan []byte
-	tx    chan<- []byte
-	state optoLinkState
-	close bool
-	error error
-}
-
-func connNet(network string, address string) (<-chan []byte, chan<- []byte) {
+func connNet(link string) (<-chan []byte, chan<- []byte) {
 	out := make(chan []byte)
 	in := make(chan []byte)
 	b := make([]byte, 1)
@@ -63,9 +74,8 @@ func connNet(network string, address string) (<-chan []byte, chan<- []byte) {
 			stateError
 			stateEot
 		)
-
 		state := stateUnconnected
-		var conn net.Conn
+		var conn optolink.Device
 		var err error
 		start := time.Now()
 		t := start
@@ -74,7 +84,8 @@ func connNet(network string, address string) (<-chan []byte, chan<- []byte) {
 		for {
 			switch state {
 			case stateUnconnected:
-				conn, err = net.Dial(network, address)
+				i = 0
+				err = conn.Connect(link)
 				if err != nil {
 					log.Printf("(TODO:) ERR: %v", err)
 					state = stateError
@@ -83,6 +94,8 @@ func connNet(network string, address string) (<-chan []byte, chan<- []byte) {
 				}
 			case stateEot:
 				conn.Write([]byte("\x04"))
+				conn.Write([]byte("\x04"))
+				state = stateConnected
 			case stateConnected:
 				start = t
 				n, err = conn.Read(b)
@@ -109,7 +122,7 @@ func connNet(network string, address string) (<-chan []byte, chan<- []byte) {
 					log.Printf("(dt=%v, i=%v) 0x%x ", t.Sub(start), i, b)
 				}
 			case stateError:
-				close(out)
+				//close(out)
 				break
 			}
 		}
