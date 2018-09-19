@@ -20,6 +20,7 @@ const (
 	EOT byte = 0x04 // End of transmission - also used similar to a reset from P300 to KW
 	ENQ byte = 0x05 // "ping" in KW mode
 	ACK byte = 0x06 // Acknowledge in P300
+	NAK byte = 0x15 // Negative acknowledge in P300
 	SYN byte = 0x16 // Start of sync sequence SYN NUL NULL in P300, switches also from KW to P300
 	SO3 byte = 0x41 // Start of frame in P300, ASCII "a"
 )
@@ -54,19 +55,18 @@ func (o *Device) Close() error {
 		err = o.conn.Close()
 	}
 
-	if err == nil || o.connected == false {
-		o.connected = false
-		return nil
-	}
+	o.connected = false
 	return err
 }
 
 func (o *Device) Read(b []byte) (int, error) {
 	o.rlock.Lock()
 	defer o.rlock.Unlock()
+
 	if o.connected == false {
 		return 0, fmt.Errorf("Read failed: Not connected")
 	}
+
 	select {
 	case <-o.done:
 		return 0, fmt.Errorf("Read failed: Closing")
