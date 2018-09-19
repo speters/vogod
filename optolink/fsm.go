@@ -74,22 +74,22 @@ func init() {
 }
 
 type FsmCmd struct {
-	id        uuid.UUID
-	command   CommandType
-	address   [2]byte
-	args      []byte
-	resultLen byte
+	Id        uuid.UUID
+	Command   CommandType
+	Address   [2]byte
+	Args      []byte
+	ResultLen byte
 }
 
 type FsmResult struct {
-	id   uuid.UUID
-	err  error
-	body []byte
+	Id   uuid.UUID
+	Err  error
+	Body []byte
 }
 
 type FsmCmdDict struct {
-	id   map[uuid.UUID]*FsmCmd
-	lock sync.Mutex
+	Id   map[uuid.UUID]*FsmCmd
+	Lock sync.Mutex
 }
 
 func Crc8(b []byte) byte {
@@ -102,49 +102,49 @@ func Crc8(b []byte) byte {
 
 func prepareCmd(cmd *FsmCmd, state VitoState) (b []byte, err error) {
 	if state == sendP300 {
-		if cmd.command == kwRead {
-			cmd.command = p300ReadData
-		} else if cmd.command == kwWrite {
-			cmd.command = p300WriteData
+		if cmd.Command == kwRead {
+			cmd.Command = p300ReadData
+		} else if cmd.Command == kwWrite {
+			cmd.Command = p300WriteData
 		}
 
-		switch cmd.command {
+		switch cmd.Command {
 		case p300ReadData:
-			b = []byte{0x41, byte(5), 0x00, 0x01, cmd.address[0], cmd.address[1], cmd.resultLen}
+			b = []byte{0x41, byte(5), 0x00, 0x01, cmd.Address[0], cmd.Address[1], cmd.ResultLen}
 		case p300WriteData:
-			b = []byte{0x41, byte((len(cmd.args) + 5)), 0x00, 0x02, cmd.address[0], cmd.address[1], byte(len(cmd.args))}
-			b = append(b, cmd.args...)
-			cmd.resultLen = byte(len(cmd.args))
+			b = []byte{0x41, byte((len(cmd.Args) + 5)), 0x00, 0x02, cmd.Address[0], cmd.Address[1], byte(len(cmd.Args))}
+			b = append(b, cmd.Args...)
+			cmd.ResultLen = byte(len(cmd.Args))
 		case p300FunctionCall:
-			// b = []byte{0x41, byte((len(cmd.args) + 5)), 0x00, 0x07, cmd.address[0], cmd.address[1], cmd.resultLen}
+			// b = []byte{0x41, byte((len(cmd.Args) + 5)), 0x00, 0x07, cmd.Address[0], cmd.Address[1], cmd.ResultLen}
 			err = fmt.Errorf("Not implemented: p300FunctionCall")
 			return nil, err
 		default:
-			err = fmt.Errorf("Not implemented: %v (GWG protocol?)", cmd.command)
+			err = fmt.Errorf("Not implemented: %v (GWG protocol?)", cmd.Command)
 			return nil, err
 		}
-		crc := Crc8(b)
+		crc := Crc8(b[1:]) // Omit start byte
 		b = append(b, crc)
 
 		return b, err
 	}
 
 	if state == sendKw {
-		if cmd.command == p300ReadData {
-			cmd.command = kwRead
-		} else if cmd.command == p300WriteData {
-			cmd.command = kwWrite
+		if cmd.Command == p300ReadData {
+			cmd.Command = kwRead
+		} else if cmd.Command == p300WriteData {
+			cmd.Command = kwWrite
 		}
 
-		switch cmd.command {
+		switch cmd.Command {
 		case kwRead:
-			b = []byte{byte(cmd.command), cmd.address[0], cmd.address[1], cmd.resultLen}
+			b = []byte{byte(cmd.Command), cmd.Address[0], cmd.Address[1], cmd.ResultLen}
 		case kwWrite:
-			b = []byte{byte(cmd.command), cmd.address[0], cmd.address[1], byte(len(cmd.args))}
-			b = append(b, cmd.args...)
-			cmd.resultLen = 1
+			b = []byte{byte(cmd.Command), cmd.Address[0], cmd.Address[1], byte(len(cmd.Args))}
+			b = append(b, cmd.Args...)
+			cmd.ResultLen = 1
 		default:
-			err = fmt.Errorf("Not implemented: %v (GWG protocol or P300 function call?)", cmd.command)
+			err = fmt.Errorf("Not implemented: %v (GWG protocol or P300 function call?)", cmd.Command)
 			return nil, err
 		}
 
@@ -160,7 +160,7 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 	var state, prevstate VitoState
 	state, prevstate = unknown, unknown
 	lastSyn, lastEnq := time.Now(), time.Now()
-	c := make(chan []byte, 1)
+	c := make(chan byte)
 	e := make(chan error)
 
 	failCount := 0
@@ -169,34 +169,34 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 	var cmd FsmCmd
 	hasCmd := false
 
-	defer close(c)
-	defer close(e)
-
 	waitforbytes := func(i int) ([]byte, error) {
 		if i == 0 {
 			return nil, nil
 		}
 		timeOutCount := 0
-		var a, b []byte
+		var a []byte
+		var b byte
 		for {
 			select {
 			case b = <-c:
-				a = append(a, b...)
+				// log.Debugf("waitforbytes: appending '%# 0x' (a='%# 0x')", b, a)
+				a = append(a, b)
 				if len(a) == i {
+					// log.Debugf("TimeoutCount: %v", timeOutCount)
 					return a, nil
 				}
 				if len(a) > i {
 					return a, fmt.Errorf("Received %v bytes, expected %v", len(a), i)
 				}
-			case <-time.After(20 * time.Millisecond):
+			case <-time.After(40 * time.Millisecond):
 				timeOutCount++
-				if timeOutCount > 2 && len(a) > 0 {
+				if timeOutCount > 2 && len(a) > 1 {
 					// Subsequent bytes should be received in short time
-					return a, fmt.Errorf("Timed out after receiving %v bytes, expected %v", len(a), i)
+					return a, fmt.Errorf("Timed out (%v times) on single byte after receiving %v bytes, expected %v", timeOutCount, len(a), i)
 				}
-				if timeOutCount > ((2500 / 20) + len(a)) {
-					// Timeout for overall sequence
-					return a, fmt.Errorf("Timed out after receiving %v bytes, expected %v", len(a), i)
+				if timeOutCount > (150 + i) {
+					// Timeout for overall sequence, allow a reasonable amount of time for device to answer
+					return a, fmt.Errorf("Time out (%v times) on byte sequence after receiving %v bytes, expected %v", timeOutCount, len(a), i)
 				}
 			}
 		}
@@ -222,28 +222,6 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 		}
 		log.Warnf("Received unexpected byte sequence %x (expected %x)", b, w)
 		return failState, b
-
-		/*
-			//b := make([]byte, 256)
-			var b []byte
-			select {
-			case b = <-c:
-				r := b[len(b)-1]
-				if r == w {
-					failCount = 0
-					return nextState, b
-				}
-				failCount++
-				log.Warnf("received unexpected byte sequence %v", b)
-				return failState, b
-			case <-time.After(2500 * time.Millisecond):
-				if failCount > 0 {
-					log.Warn("timed out")
-				}
-				failCount++
-				return failState, nil
-			}
-		*/
 	}
 	go func() {
 		b := make([]byte, 512)
@@ -253,26 +231,18 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			if err != nil {
 				e <- err
 				log.Errorf(err.Error())
+				close(c)
 				return
 			}
 			if n > 0 {
-				c <- b[:n]
+				for i := 0; i < n; i++ {
+					// log.Debugf("Reading %v into chan %v", n, time.Now())
+					// TODO: prevent writing on closed channel
+					c <- b[i]
+				}
 			}
 		}
 	}()
-
-	/*
-		go func() {
-			for {
-				b, err := device.ReadByte()
-				if err != nil {
-					e <- err
-					log.Errorf(err.Error())
-				}
-				c <- []byte{b}
-			}
-		}()
-	*/
 
 	for {
 		if prevstate != state {
@@ -289,8 +259,9 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 		}
 		switch state {
 		case unknown:
-			state, _ = waitfor(ENQ, reset, swP300)
-			lastEnq = time.Now()
+			// state, _ = waitfor(ENQ, reset, swP300)
+			// lastEnq = time.Now()
+			state = reset
 		case reset:
 			device.Write([]byte{EOT})
 			state = resetAck
@@ -303,7 +274,7 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			} else if b[0] == ACK {
 				lastEnq = time.Now()
 				failCount = 0
-				state = idle
+				state = idle // TODO: Check how to switch to P300 immediately
 			} else {
 				log.Warn(err.Error())
 				failCount++
@@ -332,30 +303,49 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			}
 
 			if hasCmd {
-				if prevstate == idle {
-					state = sendKwStart
+				if time.Now().Sub(lastEnq) > (1500 * time.Millisecond) {
+					state, _ = waitfor(ENQ, sendKwStart, reset)
 				} else {
-					if time.Now().Sub(lastEnq) > (1500 * time.Millisecond) {
-						state, _ = waitfor(ENQ, sendKwStart, reset) // Wait for ENQ
-					} else {
-						state = sendKw
-					}
+					state = sendKwStart
 				}
 			} else {
 				state, _ = waitfor(ENQ, idle, reset)
-				lastEnq = time.Now()
 			}
+			lastEnq = time.Now()
 		case sendKwStart:
-			if prevstate == idle {
+			if prevstate != recvKw {
 				device.Write([]byte{0x01})
 			}
 			state = sendKw
 		case sendKw:
-			//
-			state = recvKw
-		case recvKw:
-			//
+			hasCmd = false
+			b, err := prepareCmd(&cmd, state)
+
+			if err == nil {
+				device.Write(b)
+				state = recvKw
+				break
+			}
+			resChan <- FsmResult{cmd.Id, err, nil}
+			log.Error(err.Error())
 			state = idle
+		case recvKw:
+			b, err := waitforbytes(int(cmd.ResultLen))
+			if err != nil {
+				log.Error(err)
+				resChan <- FsmResult{cmd.Id, err, nil}
+				state = idle
+				break
+			}
+			select {
+			case cmd = <-cmdChan:
+				hasCmd = true
+				state = sendKwStart
+			default:
+				hasCmd = false
+				state = idle
+			}
+			resChan <- FsmResult{cmd.Id, err, b}
 			lastEnq = time.Now()
 		case swP300:
 			// Emit sync packet / switch to P300
@@ -370,7 +360,7 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			}
 			lastSyn = time.Now()
 		case wait:
-			if time.Now().Sub(lastSyn) > (10 * time.Second) { // TODO: actual value timeout
+			if time.Now().Sub(lastSyn) > (10 * time.Second) { // TODO: check if 10s timout is ok
 				// Emit a sync packet
 				state = swP300
 				break
@@ -391,7 +381,8 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			b, err := prepareCmd(&cmd, state)
 			if err == nil {
 				device.Write(b)
-				state = recvP300Ack
+				state = sendP300Ack
+				break
 			} else {
 				log.Warn(err.Error())
 				state = wait
@@ -405,12 +396,15 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 				state = recvP300
 			} else if b[0] == NAK {
 				err = fmt.Errorf("Received NAK, going back to wait state")
-				resChan <- FsmResult{cmd.id, err, nil}
+				log.Debug(err.Error())
+				resChan <- FsmResult{cmd.Id, err, nil}
 				hasCmd = false
 				state = wait
 			} else {
 				err = fmt.Errorf("Did not receive ACK/NACK, going back to wait state")
-				resChan <- FsmResult{cmd.id, err, nil}
+				log.Debug(err.Error())
+
+				resChan <- FsmResult{cmd.Id, err, nil}
 				//log.Warn(err.Error())
 				hasCmd = false
 				state = wait
@@ -420,58 +414,71 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			hasCmd = false
 
 			// Get frame start (0x41) and frame length
-			b, err := waitforbytes(2)
+			telegramPart1, err := waitforbytes(2)
 			if err != nil {
 				err = fmt.Errorf("Could not get start byte and length of telegram")
-				resChan <- FsmResult{cmd.id, err, nil}
+				resChan <- FsmResult{cmd.Id, err, nil}
+				// Severe error --> reset
+				state = reset
 				break
 			}
-			if b[0] != 0x41 {
-				err = fmt.Errorf("Error in telegram start byte (expected 0x41, received %x)", b[0])
-				resChan <- FsmResult{cmd.id, err, nil}
+			if telegramPart1[0] != 0x41 {
+				err = fmt.Errorf("Error in telegram start byte (expected 0x41, received %x)", telegramPart1[0])
+				resChan <- FsmResult{cmd.Id, err, nil}
+				// Severe error --> reset
+				state = reset
 				break
 			}
-			l := int(b[1])
-			b, err = waitforbytes(l)
+			l := int(telegramPart1[1])
+			telegramPart2, err := waitforbytes(l + 1)
 			if err != nil {
 				err = fmt.Errorf("Could not get telegram")
-				resChan <- FsmResult{cmd.id, err, nil}
+				resChan <- FsmResult{cmd.Id, err, nil}
+				// Severe error --> reset
+				state = reset
 				break
 			}
 
-			if b[0] == 0x03 {
+			if telegramPart2[0] != 0x01 {
+				err = fmt.Errorf("Wrong telegram type (expected answer type 0x01, received %x)", telegramPart2[0])
+				resChan <- FsmResult{cmd.Id, err, nil}
+				break
+			}
+			if telegramPart2[1] != byte(cmd.Command) {
+				err = fmt.Errorf("Wrong command byte (expected %x, received %x)", telegramPart2[1], byte(cmd.Command))
+				resChan <- FsmResult{cmd.Id, err, nil}
+				break
+			}
+			telegram := append(telegramPart1[1:], telegramPart2...)
+			crc := Crc8(telegram[:len(telegram)-1])
+			if telegram[len(telegram)-1] != crc {
+				log.Errorf("telegram='%# x' calc-crc=%x", telegram, crc)
+				err = fmt.Errorf("CRC verification failed (calculated %x, received %x)", crc, telegram[len(telegram)-1])
+				resChan <- FsmResult{cmd.Id, err, nil}
+				break
+			}
+
+			if telegramPart2[0] == 0x03 {
 				err = fmt.Errorf("Received error telegram instead of an answer")
-				state = recvP300Ack
-				resChan <- FsmResult{cmd.id, err, nil}
-				break
-			}
-			if b[0] != 0x01 {
-				err = fmt.Errorf("Wrong telegram type (expected answer type 0x01, received %x)", b[0])
-				resChan <- FsmResult{cmd.id, err, nil}
-				break
-			}
-			if b[1] != byte(cmd.command) {
-				err = fmt.Errorf("Wrong command byte (expected %x, received %x)", b[1], byte(cmd.command))
-				resChan <- FsmResult{cmd.id, err, nil}
-				break
-			}
-			crc := Crc8(b[0:len(b)-2]) + byte(l)
-			if b[len(b)-1] != crc {
-				err = fmt.Errorf("CRC verification failed (calculated %x, received %x)", b[len(b)-1], crc)
-				resChan <- FsmResult{cmd.id, err, nil}
-				break
 			}
 
-			resChan <- FsmResult{cmd.id, err, b[5 : len(b)-2]}
+			if telegramPart2[4] != cmd.ResultLen {
+				err = fmt.Errorf("Expected result length %x != received length %x", cmd.ResultLen, telegramPart2[4])
+			}
+
+			if cmd.Command != p300WriteData {
+				// Return data in Body
+				resChan <- FsmResult{Id: cmd.Id, Err: err, Body: telegram[6 : len(telegram)-1]}
+			} else {
+				// Return number of written bytes in Body
+				resChan <- FsmResult{Id: cmd.Id, Err: err, Body: []byte{telegram[5]}}
+			}
 			state = recvP300Ack
 		case recvP300Ack:
 			device.Write([]byte{ACK})
 			state = wait
 		case recvP300Nak:
-			// Drain receive buffer
-			var b []byte
-			device.Read(b)
-
+			// TODO: Drain receive buffer?
 			device.Write([]byte{NAK})
 			state = wait
 		default:

@@ -72,7 +72,7 @@ func (o *Device) Read(b []byte) (int, error) {
 		return 0, fmt.Errorf("Read failed: Closing")
 	default:
 		n, err := o.r.Read(b)
-		log.Debugf("Read b='%v', n=%v, err=%v", b[0:n], n, err)
+		log.Debugf("Read b='%# x', n=%v, err=%v", b[0:n], n, err)
 		return n, err
 	}
 }
@@ -118,7 +118,7 @@ func (o *Device) Write(b []byte) (int, error) {
 		return 0, fmt.Errorf("Write failed: Closing")
 	default:
 		n, err := o.conn.Write(b)
-		log.Debugf("Write b='%v', n=%v, err=%v", b, n, err)
+		log.Debugf("Write b='%# x', n=%v, err=%v", b, n, err)
 		return n, err
 	}
 }
