@@ -9,6 +9,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Constants for OptoLink communications in GWG, KW, and P300 protocols
+const (
+	NUL byte = 0x00 // Used as part of P300SYN
+	SOH byte = 0x01 // Start of heading - used for start of KW frame
+	EOT byte = 0x04 // End of transmission - also used similar to a reset from P300 to KW
+	ENQ byte = 0x05 // "ping" in KW mode
+	ACK byte = 0x06 // Acknowledge in P300
+	NAK byte = 0x15 // Negative acknowledge in P300
+	SYN byte = 0x16 // Start of sync sequence SYN NUL NULL in P300, switches also from KW to P300
+	SO3 byte = 0x41 // Start of frame in P300, ASCII "a"
+)
+
 // VitoState is a type for possible states of the VitoFsm state machine
 type VitoState byte
 
