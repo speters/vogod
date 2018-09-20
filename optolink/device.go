@@ -37,7 +37,8 @@ func (o *Device) Close() error {
 
 	select {
 	case <-o.done:
-		return fmt.Errorf("Close failed: Closing")
+		// return fmt.Errorf("Close failed: Closing")
+		return io.ErrClosedPipe
 	default:
 		o.r.Reset(o.conn) // TODO: check if useful
 		err = o.conn.Close()
@@ -52,12 +53,12 @@ func (o *Device) Read(b []byte) (int, error) {
 	defer o.rlock.Unlock()
 
 	if o.connected == false {
-		return 0, fmt.Errorf("Read failed: Not connected")
+		return 0, io.EOF
 	}
 
 	select {
 	case <-o.done:
-		return 0, fmt.Errorf("Read failed: Closing")
+		return 0, io.EOF
 	default:
 		n, err := o.r.Read(b)
 		log.Debugf("Read b='%# x', n=%v, err=%v", b[0:n], n, err)
@@ -70,11 +71,11 @@ func (o *Device) ReadByte() (byte, error) {
 	o.rlock.Lock()
 	defer o.rlock.Unlock()
 	if o.connected == false {
-		return 0, fmt.Errorf("ReadByte failed: Not connected")
+		return 0, io.EOF
 	}
 	select {
 	case <-o.done:
-		return 0, fmt.Errorf("ReadByte failed: Closing")
+		return 0, io.EOF
 	default:
 		return o.r.ReadByte()
 	}
@@ -85,11 +86,11 @@ func (o *Device) Peek(n int) ([]byte, error) {
 	o.rlock.Lock()
 	defer o.rlock.Unlock()
 	if o.connected == false {
-		return nil, fmt.Errorf("Peek failed: Not connected")
+		return nil, io.EOF
 	}
 	select {
 	case <-o.done:
-		return nil, fmt.Errorf("Peek failed: Closing")
+		return nil, io.EOF
 	default:
 		return o.r.Peek(n)
 	}
@@ -99,11 +100,11 @@ func (o *Device) Write(b []byte) (int, error) {
 	o.wlock.Lock()
 	defer o.wlock.Unlock()
 	if o.connected == false {
-		return 0, fmt.Errorf("Write failed: Not connected")
+		return 0, io.EOF
 	}
 	select {
 	case <-o.done:
-		return 0, fmt.Errorf("Write failed: Closing")
+		return 0, io.EOF
 	default:
 		n, err := o.conn.Write(b)
 		log.Debugf("Write b='%# x', n=%v, err=%v", b, n, err)
@@ -121,7 +122,6 @@ func (o *Device) Connect(link string) error {
 
 	u, err := url.Parse(link)
 	if err != nil {
-		close(o.done)
 		o.connected = false
 		return err
 	}
@@ -142,7 +142,6 @@ func (o *Device) Connect(link string) error {
 		}
 	} else {
 		o.connected = false
-		close(o.done)
 		return fmt.Errorf("Can not find a valid connection string in \"%v\"", link)
 	}
 	o.connected = true

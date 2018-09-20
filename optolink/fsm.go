@@ -5,7 +5,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -72,22 +71,13 @@ const (
 	physicalKmBusEepromRead CommandType = 0x43
 )
 
-/*
-	inject []struct {
-		state      vitoState
-		vals       []byte
-		injectFunc *func()
-		ejectFunc  *func()
-	}
-*/
-
 func init() {
 	log.SetLevel(log.DebugLevel)
 }
 
 // FsmCmd holds a command for the VitoFsm state machine
 type FsmCmd struct {
-	ID        uuid.UUID
+	ID        [16]byte // uuid.UID
 	Command   CommandType
 	Address   [2]byte
 	Args      []byte
@@ -96,7 +86,7 @@ type FsmCmd struct {
 
 // FsmResult is the result type for a previously issued FsmCmd command
 type FsmResult struct {
-	ID   uuid.UUID
+	ID   [16]byte // uuid.UID
 	Err  error
 	Body []byte
 }
@@ -110,6 +100,7 @@ func Crc8(b []byte) byte {
 	return crc
 }
 
+// prepareCmd prepares a KW or P300 byte sequence from a FsmCmd command
 func prepareCmd(cmd *FsmCmd, state VitoState) (b []byte, err error) {
 	if state == sendP300 {
 		if cmd.Command == kwRead {
@@ -186,9 +177,13 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 		timeOutCount := 0
 		var a []byte
 		var b byte
+		var ok bool
 		for {
 			select {
-			case b = <-c:
+			case b, ok = <-c:
+				if !ok {
+					return nil, io.EOF
+				}
 				// log.Debugf("waitforbytes: appending '%# 0x' (a='%# 0x')", b, a)
 				a = append(a, b)
 				if len(a) == i {
@@ -212,7 +207,7 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 		}
 	}
 
-	waitfor := func(w byte, nextState VitoState, failState VitoState) (VitoState, []byte) {
+	waitfor := func(w byte, nextState VitoState, failState VitoState) (VitoState, error) {
 		log.Debugf("State: %v, WaitingFor: %x, nextState: %v, failState: %v, failCount: %v", state, w, nextState, failState, failCount)
 
 		b, err := waitforbytes(1)
@@ -224,14 +219,14 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			}
 			failCount++
 
-			return failState, b
+			return failState, err
 		}
 		if w == b[len(b)-1] {
 			failCount = 0
-			return nextState, b
+			return nextState, err
 		}
 		log.Warnf("Received unexpected byte sequence %x (expected %x)", b, w)
-		return failState, b
+		return failState, err
 	}
 	go func() {
 		b := make([]byte, 512)
@@ -241,13 +236,11 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			if err != nil {
 				e <- err
 				log.Errorf(err.Error())
-				close(c)
+				close(c) // TODO: should we?
 				return
 			}
 			if n > 0 {
 				for i := 0; i < n; i++ {
-					// log.Debugf("Reading %v into chan %v", n, time.Now())
-					// TODO: prevent writing on closed channel
 					c <- b[i]
 				}
 			}
@@ -261,7 +254,10 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 		prevstate = state
 
 		select {
-		case err := <-e:
+		case err, ok := <-e:
+			if !ok {
+				return fmt.Errorf("Closed chan")
+			}
 			log.Error(err.Error())
 			return err
 		default:
@@ -272,11 +268,18 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			// state, _ = waitfor(ENQ, reset, swP300)
 			// lastEnq = time.Now()
 			state = reset
+			fallthrough
 		case reset:
-			device.Write([]byte{EOT})
+			_, err := device.Write([]byte{EOT})
+			if err != nil {
+				return err
+			}
 			state = resetAck
 		case resetAck:
 			b, err := waitforbytes(1)
+			if err != nil {
+				return err
+			}
 			if b[0] == ENQ {
 				lastEnq = time.Now()
 				failCount = 0
@@ -291,21 +294,32 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 				state = reset
 			}
 		case resetP300:
-			device.Write([]byte{EOT})
+			_, err := device.Write([]byte{EOT})
+			if err != nil {
+				return err
+			}
 			state = resetP300Ack
 		case resetP300Ack:
 			state, _ = waitfor(ACK, idle, resetAck)
 			lastEnq = time.Now()
 		case idle:
+			var err error
 			if canP300 {
-				state, _ = waitfor(ENQ, swP300, reset)
+				state, err = waitfor(ENQ, swP300, reset)
+				if err == io.EOF {
+					return err
+				}
 				lastEnq = time.Now()
 				break
 			}
 
 			if !hasCmd {
+				var ok bool
 				select {
-				case cmd = <-cmdChan:
+				case cmd, ok = <-cmdChan:
+					if !ok {
+						return fmt.Errorf("Read on closed channel")
+					}
 					hasCmd = true
 				default:
 					hasCmd = false
@@ -314,17 +328,26 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 
 			if hasCmd {
 				if time.Now().Sub(lastEnq) > (1500 * time.Millisecond) {
-					state, _ = waitfor(ENQ, sendKwStart, reset)
+					state, err = waitfor(ENQ, sendKwStart, reset)
+					if err == io.EOF {
+						return err
+					}
 				} else {
 					state = sendKwStart
 				}
 			} else {
-				state, _ = waitfor(ENQ, idle, reset)
+				state, err = waitfor(ENQ, idle, reset)
+				if err == io.EOF {
+					return err
+				}
 			}
 			lastEnq = time.Now()
 		case sendKwStart:
 			if prevstate != recvKw {
-				device.Write([]byte{0x01})
+				_, err := device.Write([]byte{0x01})
+				if err == io.EOF {
+					return err
+				}
 			}
 			state = sendKw
 		case sendKw:
@@ -332,7 +355,11 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			b, err := prepareCmd(&cmd, state)
 
 			if err == nil {
-				device.Write(b)
+				_, err = device.Write(b)
+				if err == io.EOF {
+					return err
+				}
+
 				state = recvKw
 				break
 			}
@@ -342,14 +369,22 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 		case recvKw:
 			b, err := waitforbytes(int(cmd.ResultLen))
 			if err != nil {
+				if err == io.EOF {
+					return err
+				}
+
 				log.Error(err)
 				resChan <- FsmResult{cmd.ID, err, nil}
 				state = idle
 				break
 			}
+			var ok bool
 			select {
-			case cmd = <-cmdChan:
+			case cmd, ok = <-cmdChan:
 				hasCmd = true
+				if !ok {
+					return fmt.Errorf("Read on closed channel")
+				}
 				state = sendKwStart
 			default:
 				hasCmd = false
@@ -359,15 +394,23 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			lastEnq = time.Now()
 		case swP300:
 			// Emit sync packet / switch to P300
-			device.Write([]byte{SYN, NUL, NUL})
+			_, err := device.Write([]byte{SYN, NUL, NUL})
+			if err == io.EOF {
+				return err
+			}
 			state = waitAck
 		case waitAck:
+			var err error
 			if failCount < 3 {
-				state, _ = waitfor(ACK, wait, swP300)
+				state, err = waitfor(ACK, wait, swP300)
 			} else {
-				state, _ = waitfor(ACK, wait, reset)
+				state, err = waitfor(ACK, wait, reset)
 				canP300 = false
 			}
+			if err == io.EOF {
+				return err
+			}
+
 			lastSyn = time.Now()
 		case wait:
 			if time.Now().Sub(lastSyn) > (10 * time.Second) { // TODO: check if 10s timout is ok
@@ -376,8 +419,12 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 				break
 			}
 			if !hasCmd {
+				var ok bool
 				select {
-				case cmd = <-cmdChan:
+				case cmd, ok = <-cmdChan:
+					if !ok {
+						return fmt.Errorf("Reading on closed channel")
+					}
 					hasCmd = true
 				default:
 					hasCmd = false
@@ -390,7 +437,10 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 		case sendP300:
 			b, err := prepareCmd(&cmd, state)
 			if err == nil {
-				device.Write(b)
+				_, err = device.Write(b)
+				if err == io.EOF {
+					return err
+				}
 				state = sendP300Ack
 				break
 			} else {
@@ -400,6 +450,10 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 		case sendP300Ack:
 			b, err := waitforbytes(1)
 			if err != nil {
+				if err == io.EOF {
+					return err
+				}
+
 				log.Warn(err.Error())
 			}
 			if b[0] == ACK {
@@ -426,6 +480,10 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			// Get frame start (0x41) and frame length
 			telegramPart1, err := waitforbytes(2)
 			if err != nil {
+				if err == io.EOF {
+					return err
+				}
+
 				err = fmt.Errorf("Could not get start byte and length of telegram")
 				resChan <- FsmResult{cmd.ID, err, nil}
 				// Severe error --> reset
@@ -442,6 +500,10 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			l := int(telegramPart1[1])
 			telegramPart2, err := waitforbytes(l + 1)
 			if err != nil {
+				if err == io.EOF {
+					return err
+				}
+
 				err = fmt.Errorf("Could not get telegram")
 				resChan <- FsmResult{cmd.ID, err, nil}
 				// Severe error --> reset
@@ -485,15 +547,21 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			}
 			state = recvP300Ack
 		case recvP300Ack:
-			device.Write([]byte{ACK})
+			_, err := device.Write([]byte{ACK})
+			if err == io.EOF {
+				return err
+			}
 			state = wait
 		case recvP300Nak:
 			// TODO: Drain receive buffer?
-			device.Write([]byte{NAK})
+			_, err := device.Write([]byte{NAK})
+			if err == io.EOF {
+				return err
+			}
+
 			state = wait
 		default:
-			log.Error("should not reach")
-			state = unknown
+			panic("Should not reach default state")
 		}
 	}
 }
