@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"time"
 
 	"./optolink"
 	//"github.com/tarm/serial"
@@ -21,20 +20,14 @@ var getSysDeviceIdent optolink.FsmCmd = optolink.FsmCmd{ID: [16]byte{0, 1, 2, 3,
 
 // const testDeviceIdent = [8]byte{0x20, 0x92, 0x01, 0x07, 0x00, 0x00, 0x01, 0x5a}
 
-var inputFile = flag.String("i", "ecnDataPointType.xml", "filename of ecnDataPointType.xml like file")
+var dpFile = flag.String("d", "ecnDataPointType.xml", "filename of ecnDataPointType.xml like file")
+var etFile = flag.String("e", "ecnEventType.xml", "filename of ecnEventType.xml like file")
 
 func main() {
 	flag.Parse()
 	addressHost := "orangepipc"
 	addressPort := 3002
 	address := addressHost + ":" + strconv.Itoa(addressPort)
-
-	xmlFile, err := os.Open(*inputFile)
-	if err != nil {
-		fmt.Println("Error opening file:", err)
-		return
-	}
-	defer xmlFile.Close()
 
 	dpt := &optolink.DataPointType{}
 	var etl optolink.EventTypeList
@@ -52,17 +45,32 @@ func main() {
 	result, _ := <-resChan
 	fmt.Printf("%# x, %#v\n", result.Body, result.Err)
 
+	xmlFile, err := os.Open(*dpFile)
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return
+	}
+
 	var id [8]byte
 	copy(id[:], result.Body[:8])
 	err = optolink.FindDataPointType(xmlFile, id, dpt)
 	if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Printf("num ET: %#v\n", len(dpt.EventTypes))
+	xmlFile.Close()
+
+	xmlFile, err = os.Open(*etFile)
+	if err != nil {
+		fmt.Println("Error opening file:", err)
 		return
 	}
-	fmt.Printf("%#v\n", dpt)
+	i := optolink.FindEventTypes(xmlFile, &etl)
+	fmt.Printf("num et: %v\n %#v\n", i, etl)
+	xmlFile.Close()
 
-	<-time.After(4 * time.Second)
-
-	fmt.Println("Nö!")
+	// <-time.After(4 * time.Second)
+	// fmt.Println("Nö!")
 
 	/*
 		id := [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f} // uuid.NewV4()

@@ -151,3 +151,33 @@ func FindDataPointType(xmlReader io.Reader, sysDeviceIdent [8]byte, dpt *DataPoi
 	}
 	return ErrNotFound
 }
+
+// FindEventTypes reads EventType infos from xml in a format similar to VitoSofts ecnEventType.xml format
+func FindEventTypes(xmlReader io.Reader, etl *EventTypeList) int {
+	decoder := xml.NewDecoder(xmlReader)
+	found := 0
+
+	for {
+		t, _ := decoder.Token()
+		if t == nil {
+			break
+		}
+		switch se := t.(type) {
+		case xml.StartElement:
+			if se.Name.Local == "EventType" {
+				var et EventType
+				decoder.DecodeElement(&et, &se)
+
+				if _, ok := (*etl)[et.ID]; !ok {
+					break
+				}
+				(*etl)[et.ID] = et
+				found++
+
+			}
+		default:
+			//
+		}
+	}
+	return found
+}
