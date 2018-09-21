@@ -68,12 +68,12 @@ func FindDataPointType(xmlReader io.Reader, sysDeviceIdent [8]byte, dpt *DataPoi
 						idExtTill = 0
 					}
 
-					var dataPointIdExt uint64
-					dataPointIdExt = uint64(sysDeviceIdent[2])<<8 | uint64(sysDeviceIdent[3])
+					var dataPointIDExt uint64
+					dataPointIDExt = uint64(sysDeviceIdent[2])<<8 | uint64(sysDeviceIdent[3])
 					if (len(d.IdentificationExtension) > 4) || (len(d.IdentificationExtensionTill) > 4) {
-						dataPointIdExt = uint64(dataPointIdExt)<<16 | uint64(sysDeviceIdent[4])<<8 | uint64(sysDeviceIdent[5])
+						dataPointIDExt = uint64(dataPointIDExt)<<16 | uint64(sysDeviceIdent[4])<<8 | uint64(sysDeviceIdent[5])
 					}
-					if dataPointIdExt >= idExt && (dataPointIdExt < idExtTill || idExtTill == 0) {
+					if dataPointIDExt >= idExt && (dataPointIDExt < idExtTill || idExtTill == 0) {
 						if dp.ID == "" {
 							// First match, break as there is nothing to compare
 							dp = d
