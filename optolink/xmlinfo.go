@@ -18,41 +18,6 @@ type xDataPointType struct {
 	IdentificationExtensionTill string `xml:"IdentificationExtensionTill"`
 }
 
-// DataPointType is a type to describe a DataPoint (aka a Vito* device)
-type DataPointType struct {
-	ID             string
-	Description    string
-	SysDeviceIdent [8]byte
-	EventTypes     EventTypeList
-}
-
-// EventType holds low-level info for commands like address, data format and conversion hints
-type EventType struct {
-	ID      string
-	Address string
-
-	AccessMode string
-	FCRead     string
-	FCWrite    string
-
-	Parameter   string
-	SDKDataType string
-
-	BlockLength  string
-	BytePosition string
-	ByteLength   string
-	BitPosition  string
-	BitLength    string
-
-	Conversion string
-}
-
-// EventTypeList is just a map of EventTyp (aka command) elements
-type EventTypeList map[string]EventType
-
-// EventTypeAliasList may hold aliases or translated names for commands
-type EventTypeAliasList map[string]*EventType
-
 // ErrNotFound is returned when data could not be found
 var ErrNotFound = errors.New("Not found")
 
