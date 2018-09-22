@@ -1,4 +1,4 @@
-package optolink
+package vogo
 
 import (
 	"fmt"
@@ -7,6 +7,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
+
+//go:generate stringer -type VitoState,CommandType
 
 // Constants for OptoLink communications in GWG, KW, and P300 protocols
 const (

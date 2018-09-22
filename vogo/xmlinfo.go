@@ -1,4 +1,4 @@
-package optolink
+package vogo
 
 import (
 	"encoding/hex"

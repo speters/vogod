@@ -1,4 +1,4 @@
-package optolink
+package vogo
 
 import "time"
 
@@ -84,6 +84,7 @@ type MemType struct {
 	CacheTime time.Time
 }
 
+/*
 type EventDecoder interface {
 	Decode(data *MemType, e *EventType) (val interface{}, err error)
 }
@@ -97,3 +98,4 @@ func Decode(data *MemType, e *EventType) (val interface{}, err error) {
 func Encode(val interface{}, e *EventType) (data MemType, err error) {
 	return data, err
 }
+*/
