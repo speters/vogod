@@ -22,8 +22,8 @@ type Device struct {
 	connected bool
 	done      chan struct{}
 
-	// rx <-chan []byte
-	// tx chan<- []byte
+	cmdChan chan FsmCmd
+	resChan chan FsmResult
 }
 
 // Close closes Device, closing underlying connection via serial or network
@@ -148,5 +148,17 @@ func (o *Device) Connect(link string) error {
 	o.done = make(chan struct{})
 	o.r = bufio.NewReader(o.conn)
 
+	o.cmdChan = make(chan FsmCmd)
+	o.resChan = make(chan FsmResult)
+
+	go o.vitoFsm()
+
 	return nil
+}
+
+// RawCmd takes a raw FsmCmd and returns FsmResult
+func (o *Device) RawCmd(cmd FsmCmd) FsmResult {
+	o.cmdChan <- cmd
+	result, _ := <-o.resChan
+	return result
 }

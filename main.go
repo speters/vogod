@@ -30,20 +30,18 @@ func main() {
 	address := addressHost + ":" + strconv.Itoa(addressPort)
 
 	dpt := &optolink.DataPointType{}
-	var etl optolink.EventTypeList
-	etl = make(optolink.EventTypeList)
-	dpt.EventTypes = etl
+	dpt.EventTypes = make(optolink.EventTypeList)
 
 	conn := &optolink.Device{}
 	conn.Connect("socket://" + address)
 
-	cmdChan := make(chan optolink.FsmCmd)
-	resChan := make(chan optolink.FsmResult)
-	go optolink.VitoFsm(conn, cmdChan, resChan)
+	result := conn.RawCmd(getSysDeviceIdent)
+	if result.Err != nil {
+		return
+	}
 
-	cmdChan <- getSysDeviceIdent
-	result, _ := <-resChan
-	fmt.Printf("%# x, %#v\n", result.Body, result.Err)
+	var sysDeviceID [8]byte
+	copy(sysDeviceID[:], result.Body[:8])
 
 	xmlFile, err := os.Open(*dpFile)
 	if err != nil {
@@ -51,23 +49,32 @@ func main() {
 		return
 	}
 
-	var id [8]byte
-	copy(id[:], result.Body[:8])
-	err = optolink.FindDataPointType(xmlFile, id, dpt)
+	err = optolink.FindDataPointType(xmlFile, sysDeviceID, dpt)
+	xmlFile.Close()
 	if err != nil {
 		fmt.Println(err.Error())
+		return
 	}
-	fmt.Printf("num ET: %#v\n", len(dpt.EventTypes))
-	xmlFile.Close()
 
 	xmlFile, err = os.Open(*etFile)
 	if err != nil {
 		fmt.Println("Error opening file:", err)
 		return
 	}
-	i := optolink.FindEventTypes(xmlFile, &etl)
-	fmt.Printf("num et: %v\n %#v\n", i, etl)
+
+	i := optolink.FindEventTypes(xmlFile, &dpt.EventTypes)
 	xmlFile.Close()
+	if i == 0 {
+		fmt.Printf("No EventType definitions found for this DataPoint %v\n", sysDeviceID[:6])
+		return
+	}
+
+	//fmt.Printf("num et: %v\n %#v\n", i, dpt.EventTypes)
+	if i != len(dpt.EventTypes) {
+		fmt.Printf("Attn: %v EventType definitions found, but %v announced in DataPoint %v definition", i, len(dpt.EventTypes), dpt.ID)
+	} else {
+		fmt.Printf("All %v EventTypes found for DataPoint %v\n", i, dpt.ID)
+	}
 
 	// <-time.After(4 * time.Second)
 	// fmt.Println("Nö!")

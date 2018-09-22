@@ -48,6 +48,7 @@ const (
 type CommandType byte
 
 const (
+	nop              CommandType = 0x00
 	p300ReadData     CommandType = 0x01
 	p300WriteData    CommandType = 0x02
 	p300FunctionCall CommandType = 0x07
@@ -157,7 +158,7 @@ func prepareCmd(cmd *FsmCmd, state VitoState) (b []byte, err error) {
 }
 
 // VitoFsm handles the state machine for the KW and P300 protocols
-func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResult) error { //, peer *io.ReadWriter, inChan <-chan byte, outChan chan<- byte) {
+func (device *Device) vitoFsm() error { //, peer *io.ReadWriter, inChan <-chan byte, outChan chan<- byte) {
 	var state, prevstate VitoState
 	state, prevstate = unknown, unknown
 	lastSyn, lastEnq := time.Now(), time.Now()
@@ -231,6 +232,14 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 	go func() {
 		b := make([]byte, 512)
 
+		select {
+		case <-device.done:
+			log.Debugf("Closing, returning from reading loop goroutine")
+
+			return
+		default:
+		}
+
 		for {
 			n, err := device.Read(b[0:])
 			if err != nil {
@@ -248,6 +257,13 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 	}()
 
 	for {
+		select {
+		case <-device.done:
+			log.Debugf("Closing, returning from fsm")
+			return nil
+		default:
+		}
+
 		if prevstate != state {
 			log.Debugf("State changed: %v --> %v", prevstate, state)
 		}
@@ -316,7 +332,7 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			if !hasCmd {
 				var ok bool
 				select {
-				case cmd, ok = <-cmdChan:
+				case cmd, ok = <-device.cmdChan:
 					if !ok {
 						return fmt.Errorf("Read on closed channel")
 					}
@@ -363,7 +379,7 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 				state = recvKw
 				break
 			}
-			resChan <- FsmResult{cmd.ID, err, nil}
+			device.resChan <- FsmResult{cmd.ID, err, nil}
 			log.Error(err.Error())
 			state = idle
 		case recvKw:
@@ -374,13 +390,25 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 				}
 
 				log.Error(err)
-				resChan <- FsmResult{cmd.ID, err, nil}
+				device.resChan <- FsmResult{cmd.ID, err, nil}
 				state = idle
 				break
 			}
+			if cmd.Command == kwWrite {
+				// Should return 0x00 on successful write
+				if b[0] != 0x00 {
+					err = fmt.Errorf("kwWrite returned %v, expected 0x00", b)
+					log.Error(err)
+					device.resChan <- FsmResult{cmd.ID, err, nil}
+					state = idle
+					break
+				}
+				// Set returned Body value to contain length of written bytes, as in P300
+				b = []byte{byte(len(cmd.Args))}
+			}
 			var ok bool
 			select {
-			case cmd, ok = <-cmdChan:
+			case cmd, ok = <-device.cmdChan:
 				hasCmd = true
 				if !ok {
 					return fmt.Errorf("Read on closed channel")
@@ -390,7 +418,7 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 				hasCmd = false
 				state = idle
 			}
-			resChan <- FsmResult{cmd.ID, err, b}
+			device.resChan <- FsmResult{cmd.ID, err, b}
 			lastEnq = time.Now()
 		case swP300:
 			// Emit sync packet / switch to P300
@@ -421,7 +449,7 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			if !hasCmd {
 				var ok bool
 				select {
-				case cmd, ok = <-cmdChan:
+				case cmd, ok = <-device.cmdChan:
 					if !ok {
 						return fmt.Errorf("Reading on closed channel")
 					}
@@ -461,14 +489,14 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			} else if b[0] == NAK {
 				err = fmt.Errorf("Received NAK, going back to wait state")
 				log.Debug(err.Error())
-				resChan <- FsmResult{cmd.ID, err, nil}
+				device.resChan <- FsmResult{cmd.ID, err, nil}
 				hasCmd = false
 				state = wait
 			} else {
 				err = fmt.Errorf("Did not receive ACK/NACK, going back to wait state")
 				log.Debug(err.Error())
 
-				resChan <- FsmResult{cmd.ID, err, nil}
+				device.resChan <- FsmResult{cmd.ID, err, nil}
 				//log.Warn(err.Error())
 				hasCmd = false
 				state = wait
@@ -485,14 +513,14 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 				}
 
 				err = fmt.Errorf("Could not get start byte and length of telegram")
-				resChan <- FsmResult{cmd.ID, err, nil}
+				device.resChan <- FsmResult{cmd.ID, err, nil}
 				// Severe error --> reset
 				state = reset
 				break
 			}
 			if telegramPart1[0] != 0x41 {
 				err = fmt.Errorf("Error in telegram start byte (expected 0x41, received %x)", telegramPart1[0])
-				resChan <- FsmResult{cmd.ID, err, nil}
+				device.resChan <- FsmResult{cmd.ID, err, nil}
 				// Severe error --> reset
 				state = reset
 				break
@@ -505,7 +533,7 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 				}
 
 				err = fmt.Errorf("Could not get telegram")
-				resChan <- FsmResult{cmd.ID, err, nil}
+				device.resChan <- FsmResult{cmd.ID, err, nil}
 				// Severe error --> reset
 				state = reset
 				break
@@ -513,12 +541,12 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 
 			if telegramPart2[0] != 0x01 {
 				err = fmt.Errorf("Wrong telegram type (expected answer type 0x01, received %x)", telegramPart2[0])
-				resChan <- FsmResult{cmd.ID, err, nil}
+				device.resChan <- FsmResult{cmd.ID, err, nil}
 				break
 			}
 			if telegramPart2[1] != byte(cmd.Command) {
 				err = fmt.Errorf("Wrong command byte (expected %x, received %x)", telegramPart2[1], byte(cmd.Command))
-				resChan <- FsmResult{cmd.ID, err, nil}
+				device.resChan <- FsmResult{cmd.ID, err, nil}
 				break
 			}
 			telegram := append(telegramPart1[1:], telegramPart2...)
@@ -526,7 +554,7 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 			if telegram[len(telegram)-1] != crc {
 				log.Errorf("telegram='%# x' calc-crc=%x", telegram, crc)
 				err = fmt.Errorf("CRC verification failed (calculated %x, received %x)", crc, telegram[len(telegram)-1])
-				resChan <- FsmResult{cmd.ID, err, nil}
+				device.resChan <- FsmResult{cmd.ID, err, nil}
 				break
 			}
 
@@ -540,10 +568,10 @@ func VitoFsm(device io.ReadWriter, cmdChan <-chan FsmCmd, resChan chan<- FsmResu
 
 			if cmd.Command != p300WriteData {
 				// Return data in Body
-				resChan <- FsmResult{ID: cmd.ID, Err: err, Body: telegram[6 : len(telegram)-1]}
+				device.resChan <- FsmResult{ID: cmd.ID, Err: err, Body: telegram[6 : len(telegram)-1]}
 			} else {
 				// Return number of written bytes in Body
-				resChan <- FsmResult{ID: cmd.ID, Err: err, Body: []byte{telegram[5]}}
+				device.resChan <- FsmResult{ID: cmd.ID, Err: err, Body: []byte{telegram[5]}}
 			}
 			state = recvP300Ack
 		case recvP300Ack:
