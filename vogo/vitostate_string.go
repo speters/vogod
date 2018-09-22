@@ -15,28 +15,29 @@ func (i VitoState) String() string {
 	return _VitoState_name[_VitoState_index[i]:_VitoState_index[i+1]]
 }
 
-const _CommandType_name = "p300ReadDatap300WriteDatap300FunctionCallphysicalKmbusRAMReadphysicalKmBusEepromReadphysicalPortWritephysicalPortReadphysicalBeWritephysicalBeReadeepromWriteeepromReadphysicalXramWritevirtualWritephysicalXramReadvirtualReadphysicalWritephysicalReadkwWritekwRead"
+const _CommandType_name = "nopp300ReadDatap300WriteDatap300FunctionCallphysicalKmbusRAMReadphysicalKmBusEepromReadphysicalPortWritephysicalPortReadphysicalBeWritephysicalBeReadeepromWriteeepromReadphysicalXramWritevirtualWritephysicalXramReadvirtualReadphysicalWritephysicalReadkwWritekwRead"
 
 var _CommandType_map = map[CommandType]string{
-	1:   _CommandType_name[0:12],
-	2:   _CommandType_name[12:25],
-	7:   _CommandType_name[25:41],
-	51:  _CommandType_name[41:61],
-	67:  _CommandType_name[61:84],
-	109: _CommandType_name[84:101],
-	110: _CommandType_name[101:117],
-	157: _CommandType_name[117:132],
-	158: _CommandType_name[132:146],
-	173: _CommandType_name[146:157],
-	174: _CommandType_name[157:167],
-	195: _CommandType_name[167:184],
-	196: _CommandType_name[184:196],
-	197: _CommandType_name[196:212],
-	199: _CommandType_name[212:223],
-	200: _CommandType_name[223:236],
-	203: _CommandType_name[236:248],
-	244: _CommandType_name[248:255],
-	247: _CommandType_name[255:261],
+	0:   _CommandType_name[0:3],
+	1:   _CommandType_name[3:15],
+	2:   _CommandType_name[15:28],
+	7:   _CommandType_name[28:44],
+	51:  _CommandType_name[44:64],
+	67:  _CommandType_name[64:87],
+	109: _CommandType_name[87:104],
+	110: _CommandType_name[104:120],
+	157: _CommandType_name[120:135],
+	158: _CommandType_name[135:149],
+	173: _CommandType_name[149:160],
+	174: _CommandType_name[160:170],
+	195: _CommandType_name[170:187],
+	196: _CommandType_name[187:199],
+	197: _CommandType_name[199:215],
+	199: _CommandType_name[215:226],
+	200: _CommandType_name[226:239],
+	203: _CommandType_name[239:251],
+	244: _CommandType_name[251:258],
+	247: _CommandType_name[258:264],
 }
 
 func (i CommandType) String() string {
