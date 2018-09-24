@@ -74,6 +74,43 @@ const (
 	physicalKmBusEepromRead CommandType = 0x43
 )
 
+var readCmds = map[CommandType]bool{
+	p300ReadData:            true,
+	kwRead:                  true,
+	virtualRead:             true,
+	physicalRead:            true,
+	eepromRead:              true,
+	physicalXramRead:        true,
+	physicalPortRead:        true,
+	physicalBeRead:          true,
+	physicalKmbusRAMRead:    true,
+	physicalKmBusEepromRead: true,
+}
+var writeCmds = map[CommandType]bool{
+	p300WriteData:     true,
+	kwWrite:           true,
+	virtualWrite:      true,
+	physicalWrite:     true,
+	eepromWrite:       true,
+	physicalXramWrite: true,
+	physicalPortWrite: true,
+	physicalBeWrite:   true,
+}
+
+func IsReadCmd(c CommandType) bool {
+	if _, ok := readCmds[c]; ok {
+		return true
+	}
+	return false
+}
+
+func IsWriteCmd(c CommandType) bool {
+	if _, ok := writeCmds[c]; ok {
+		return true
+	}
+	return false
+}
+
 func init() {
 	log.SetLevel(log.DebugLevel)
 }

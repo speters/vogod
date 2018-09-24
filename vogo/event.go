@@ -74,12 +74,12 @@ type EventTypeList map[string]EventType
 type EventTypeAliasList map[string]*EventType
 
 // MemMap holds data of an address space
-type MemMap map[uint16]*MemType
+type MemMap map[uint16]MemType
 
 // MemType is to hold raw data, including a timestamp used for caching
 type MemType struct {
 	// The actual raw data
-	Data []byte
+	Data byte
 	// Date of last refresh
 	CacheTime time.Time
 }

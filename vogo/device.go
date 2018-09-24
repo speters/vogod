@@ -22,9 +22,15 @@ type Device struct {
 	connected bool
 	done      chan struct{}
 
+	DataPoint     *DataPointType
+	Mem           *MemMap
+	CacheDuration time.Duration
+
 	cmdChan chan FsmCmd
 	resChan chan FsmResult
 }
+
+const cacheDuration = 3 * time.Second
 
 // Close closes Device, closing underlying connection via serial or network
 func (o *Device) Close() error {
@@ -151,14 +157,17 @@ func (o *Device) Connect(link string) error {
 	o.cmdChan = make(chan FsmCmd)
 	o.resChan = make(chan FsmResult)
 
+	o.DataPoint = &DataPointType{}
+	o.DataPoint.EventTypes = make(EventTypeList)
+	m := make(MemMap, (1 << 16))
+	o.Mem = &m
+
+	o.CacheDuration = cacheDuration
+
 	go o.vitoFsm()
 
 	return nil
 }
 
-// RawCmd takes a raw FsmCmd and returns FsmResult
-func (o *Device) RawCmd(cmd FsmCmd) FsmResult {
-	o.cmdChan <- cmd
-	result, _ := <-o.resChan
-	return result
-}
+func bytes2Addr(a [2]byte) uint16 { return uint16(a[0])<<8 + uint16(a[1]) }
+func addr2Bytes(a uint16) [2]byte { return [2]byte{byte(a >> 8), byte(a & 0xff)} }

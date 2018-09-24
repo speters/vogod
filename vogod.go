@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	vogo "./vogo"
 	log "github.com/sirupsen/logrus"
@@ -27,11 +28,12 @@ func main() {
 	addressPort := 3002
 	address := addressHost + ":" + strconv.Itoa(addressPort)
 
-	dpt := &vogo.DataPointType{}
-	dpt.EventTypes = make(vogo.EventTypeList)
-
 	conn := &vogo.Device{}
 	conn.Connect("socket://" + address)
+
+	conn.DataPoint = &vogo.DataPointType{}
+	dpt := conn.DataPoint
+	dpt.EventTypes = make(vogo.EventTypeList)
 
 	result := conn.RawCmd(getSysDeviceIdent)
 	if result.Err != nil {
@@ -74,14 +76,20 @@ func main() {
 		fmt.Printf("All %v EventTypes found for DataPoint %v\n", i, dpt.ID)
 	}
 
-	/*
-		for i := 0; i < 100; i++ {
-			result := conn.RawCmd(getSysDeviceIdent)
-			if result.Err != nil {
-				return
-			}
+	fmt.Printf("\nNum conn.DataPoint.EventTypes: %v\n", len(conn.DataPoint.EventTypes))
+
+	for i := 0; i < 100; i++ {
+		result := conn.RawCmd(getSysDeviceIdent)
+		if result.Err != nil {
+			return
 		}
-	*/
+	}
+
+	b, err := conn.VReadTime("Uhrzeit~0x088E")
+	fmt.Printf("\nTIME: %v\n", b)
+	err = conn.VWriteTime("Uhrzeit~0x088E", time.Now())
+	b, err = conn.VReadTime("Uhrzeit~0x088E")
+	fmt.Printf("\nTIME: %v\n", b)
 	// <-time.After(4 * time.Second)
 	// fmt.Println("Nö!")
 
