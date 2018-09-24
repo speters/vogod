@@ -145,7 +145,7 @@ func FindDataPointType(xmlReader io.Reader, sysDeviceIdent [8]byte, dpt *DataPoi
 		etl := dpt.EventTypes
 
 		for _, et := range strings.Split(dp.EventtTypeList, ";") {
-			etl[et] = EventType{ID: et}
+			etl[et] = &EventType{ID: et}
 		}
 		r.EventTypes = etl
 
@@ -173,7 +173,8 @@ func FindEventTypes(xmlReader io.Reader, etl *EventTypeList) int {
 				if _, ok := (*etl)[et.ID]; !ok {
 					break
 				}
-				(*etl)[et.ID], _ = validatexEventType(et)
+				vet, _ := validatexEventType(et)
+				(*etl)[et.ID] = &vet
 				found++
 
 			}
@@ -264,6 +265,10 @@ func validatexEventType(xet xEventType) (EventType, error) {
 
 	et.ValueList = xet.ValueList
 	et.Unit = xet.Unit
+
+	if et.Conversion == "DateTimeBCD" {
+		et.Codec = dateTimeCodec{}
+	}
 
 	return et, err
 }

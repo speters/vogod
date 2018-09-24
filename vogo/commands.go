@@ -8,32 +8,40 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (o *Device) getCache(addr uint16, len uint16) (b []byte, oldestCacheTime time.Time) {
+	aok := true
+	var c []byte
+	for a := addr; a < (addr + len); a++ {
+		cacheMem, ok := (*o.Mem)[a]
+		if !ok {
+			aok = false
+			break
+		}
+		if cacheMem.CacheTime.IsZero() {
+			aok = false
+			break
+		}
+		if oldestCacheTime.IsZero() || cacheMem.CacheTime.Before(oldestCacheTime) {
+			oldestCacheTime = cacheMem.CacheTime
+		}
+		c = append(c, cacheMem.Data)
+
+	}
+	if !aok {
+		c = nil
+	}
+	return c, oldestCacheTime
+}
+
 // RawCmd takes a raw FsmCmd and returns FsmResult
+// It makes use of caching. Set Device.CacheDuration to 0 to disable
 func (o *Device) RawCmd(cmd FsmCmd) FsmResult {
 	addr := bytes2Addr(cmd.Address)
 	now := time.Now()
 
-	if IsReadCmd(cmd.Command) && cmd.ResultLen > 0 {
-		aok := true
-		var oldestCacheTime time.Time
-		var c []byte
-		for a := addr; a < (addr + uint16(cmd.ResultLen)); a++ {
-			cacheMem, ok := (*o.Mem)[a]
-			if !ok {
-				aok = false
-				break
-			}
-			if cacheMem.CacheTime.IsZero() {
-				aok = false
-				break
-			}
-			if oldestCacheTime.IsZero() || cacheMem.CacheTime.Before(oldestCacheTime) {
-				oldestCacheTime = cacheMem.CacheTime
-			}
-			c = append(c, cacheMem.Data)
-
-		}
-		if aok && now.Sub(oldestCacheTime) < o.CacheDuration {
+	if IsReadCmd(cmd.Command) && o.CacheDuration > 0 && cmd.ResultLen > 0 {
+		c, oldestCacheTime := o.getCache(addr, uint16(cmd.ResultLen))
+		if c != nil && now.Sub(oldestCacheTime) < o.CacheDuration {
 			log.Debugf("Cache hit for FsmCmd at addr: %v, Body: %# x", addr, c)
 			return FsmResult{ID: cmd.ID, Err: nil, Body: c}
 		}
@@ -47,13 +55,13 @@ func (o *Device) RawCmd(cmd FsmCmd) FsmResult {
 		}
 
 		for i := uint16(0); i < uint16(len(result.Body)); i++ {
-			(*o.Mem)[addr+i] = MemType{result.Body[i], t}
+			(*o.Mem)[addr+i] = &MemType{result.Body[i], t}
 		}
 	}
 	return result
 }
 
-func (e *EventTypeList) getEventTypeByID(ID string) (et EventType, err error) {
+func (e *EventTypeList) getEventTypeByID(ID string) (et *EventType, err error) {
 	et, ok := (*e)[ID]
 	if !ok {
 		err = fmt.Errorf("EventType %v not found", ID)
@@ -69,11 +77,17 @@ func newUUID() [16]byte {
 	return uuid
 }
 
+func (et *EventType) DecodeInt(b []byte) (data interface{}, typeHint string, err error) {
+	typeHint = "Int"
+	data = int(b[0])
+	return data, typeHint, nil
+}
+
 // VRead is the generic command to read Events of arbitrary data types
 func (o *Device) VRead(ID string) (data interface{}, err error) {
-	et, err := o.DataPoint.EventTypes.getEventTypeByID(ID)
-	if err != nil {
-		return data, err
+	et, ok := o.DataPoint.EventTypes[ID]
+	if !ok {
+		return data, fmt.Errorf("EventType %v not found", ID)
 	}
 
 	if et.FCRead == 0 {
@@ -167,9 +181,9 @@ func (o *Device) VWriteTimeArr(et *EventType, b []time.Time) (err error) {
 
 // VReadTime reads an EventType as time.Time value
 func (o *Device) VReadTime(ID string) (t time.Time, err error) {
-	et, err := o.DataPoint.EventTypes.getEventTypeByID(ID)
-	if err != nil {
-		return t, err
+	et, ok := o.DataPoint.EventTypes[ID]
+	if !ok {
+		return t, fmt.Errorf("EventType %v not found", ID)
 	}
 
 	if et.FCRead == 0 {
@@ -187,7 +201,9 @@ func (o *Device) VReadTime(ID string) (t time.Time, err error) {
 		return t, res.Err
 	}
 
-	t = time.Date(fromBCD(res.Body[0])*100+fromBCD(res.Body[1]), time.Month(fromBCD(res.Body[2])), fromBCD(res.Body[3]), fromBCD(res.Body[5]), fromBCD(res.Body[6]), fromBCD(res.Body[7]), 0, time.Local)
+	//t = time.Date(fromBCD(res.Body[0])*100+fromBCD(res.Body[1]), time.Month(fromBCD(res.Body[2])), fromBCD(res.Body[3]), fromBCD(res.Body[5]), fromBCD(res.Body[6]), fromBCD(res.Body[7]), 0, time.Local)
+	v, _ := et.Codec.Decode(et, &res.Body)
+	t = v.(time.Time)
 	return t, err
 }
 func (o *Device) VWriteTime(ID string, t time.Time) (err error) {
@@ -195,9 +211,9 @@ func (o *Device) VWriteTime(ID string, t time.Time) (err error) {
 		return fmt.Errorf("Can not write zero value of time.Time (%v)", t)
 	}
 
-	et, err := o.DataPoint.EventTypes.getEventTypeByID(ID)
-	if err != nil {
-		return err
+	et, ok := o.DataPoint.EventTypes[ID]
+	if !ok {
+		return fmt.Errorf("EventType %v not found", ID)
 	}
 
 	if et.FCWrite == 0 {

@@ -65,16 +65,18 @@ type EventType struct {
 	// OptionList       string
 	ValueList string
 	Unit      string
+
+	Codec Codec
 }
 
 // EventTypeList is just a map of EventTyp (aka command) elements
-type EventTypeList map[string]EventType
+type EventTypeList map[string]*EventType
 
 // EventTypeAliasList may hold aliases or translated names for commands
 type EventTypeAliasList map[string]*EventType
 
 // MemMap holds data of an address space
-type MemMap map[uint16]MemType
+type MemMap map[uint16]*MemType
 
 // MemType is to hold raw data, including a timestamp used for caching
 type MemType struct {

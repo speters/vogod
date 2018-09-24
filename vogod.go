@@ -85,11 +85,14 @@ func main() {
 		}
 	}
 
-	b, err := conn.VReadTime("Uhrzeit~0x088E")
-	fmt.Printf("\nTIME: %v\n", b)
-	err = conn.VWriteTime("Uhrzeit~0x088E", time.Now())
-	b, err = conn.VReadTime("Uhrzeit~0x088E")
-	fmt.Printf("\nTIME: %v\n", b)
+	if true {
+		b, _ := conn.VReadTime("Uhrzeit~0x088E")
+		fmt.Printf("\nTIME: %v\n", b)
+		conn.VWriteTime("Uhrzeit~0x088E", time.Now())
+		b, _ = conn.VReadTime("Uhrzeit~0x088E")
+		fmt.Printf("\nTIME: %v\n", b)
+	}
+
 	// <-time.After(4 * time.Second)
 	// fmt.Println("Nö!")
 
