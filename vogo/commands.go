@@ -207,10 +207,6 @@ func (o *Device) VReadTime(ID string) (t time.Time, err error) {
 	return t, err
 }
 func (o *Device) VWriteTime(ID string, t time.Time) (err error) {
-	if t.IsZero() {
-		return fmt.Errorf("Can not write zero value of time.Time (%v)", t)
-	}
-
 	et, ok := o.DataPoint.EventTypes[ID]
 	if !ok {
 		return fmt.Errorf("EventType %v not found", ID)
@@ -220,45 +216,17 @@ func (o *Device) VWriteTime(ID string, t time.Time) (err error) {
 		return fmt.Errorf("EventType %v is not readable", et.ID)
 	}
 
-	if et.Conversion != "DateTimeBCD" {
-		return fmt.Errorf("EventType %v can not be set from a time.Time value", ID)
-	}
-
-	t = t.Local()
-
 	b := make([]byte, 8)
-	b[0] = byte(toBCD(t.Year() / 100))
-	b[1] = byte(toBCD(t.Year() % 100))
-	b[2] = byte(toBCD(int(t.Month())))
-	b[3] = byte(toBCD(t.Day()))
-	wday := int(t.Weekday())
-	if wday == 0 {
-		wday = 7
+
+	err = et.Codec.Encode(et, &b, t)
+	if err != nil {
+		return err
 	}
-	b[4] = byte(toBCD(wday))
-	b[5] = byte(toBCD(t.Hour()))
-	b[6] = byte(toBCD(t.Minute()))
-	b[7] = byte(toBCD(t.Second()))
 
 	cmd := FsmCmd{ID: newUUID(), Command: et.FCWrite, Address: addr2Bytes(et.Address), Args: b, ResultLen: byte(et.BlockLength)}
 	res := o.RawCmd(cmd)
 
-	if res.Err != nil {
-		return res.Err
-	}
-	/*
-	       vito_date[0] = TOBCD((t->tm_year + 1900) / 100);
-	       vito_date[1] = TOBCD(t->tm_year - 100 ); // according to the range settable on the Vitodens LCD frontpanel
-	       vito_date[2] = TOBCD(t->tm_mon + 1);
-	       vito_date[3] = TOBCD(t->tm_mday);
-	       vito_date[4] = TOBCD(t->tm_wday); // <--- Mo == 1, Su == 7
-	       vito_date[5] = TOBCD(t->tm_hour);
-	       vito_date[6] = TOBCD(t->tm_min);
-	   vito_date[7] = TOBCD(t->tm_sec);
-	*/
-
-	// wday = int(res.Body[4]) // wday on GoLang is 0 == Su
-	return err
+	return res.Err
 }
 func (o *Device) VReadDuration(et *EventType) (t time.Duration, err error) {
 	return t, err

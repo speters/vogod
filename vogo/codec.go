@@ -40,7 +40,7 @@ func (dateTimeCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error)
 
 	(*b)[et.BytePosition] = byte(toBCD(t.Year() / 100))
 	(*b)[et.BytePosition+1] = byte(toBCD(t.Year() % 100))
-	(*b)[et.BytePosition+1] = byte(toBCD(int(t.Month())))
+	(*b)[et.BytePosition+2] = byte(toBCD(int(t.Month())))
 	(*b)[et.BytePosition+3] = byte(toBCD(t.Day()))
 	wday := int(t.Weekday())
 	if wday == 0 {
