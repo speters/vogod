@@ -98,7 +98,13 @@ func main() {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	fmt.Printf("\nBetriebsstunden: %v\n", b)
+	fmt.Printf("BetriebsstundenBrenner1~0x0886: %v\n", b)
+
+	f, err := conn.VRead("Gemischte_AT~0x5527")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Printf("Gemischte_AT~0x5527: %v\n", f)
 
 	// <-time.After(4 * time.Second)
 	// fmt.Println("Nö!")

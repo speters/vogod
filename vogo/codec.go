@@ -24,10 +24,170 @@ func (nopCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error) { re
 type dateDivMulOffsetCodec struct{}
 
 func (dateDivMulOffsetCodec) Decode(et *EventType, b *[]byte) (v interface{}, err error) {
+	if len((*b)) < (int(et.BytePosition) + int(et.ByteLength)) {
+		return nil, fmt.Errorf("dateDivMulOffsetCodec: Data length mismatch")
+	}
 
-	return (*b), nil
+	if (et.BitLength > 0) && !((et.ByteLength == 1) && (et.BitLength == 4)) {
+		return nil, fmt.Errorf("dateDivMulOffsetCodec: Can not handle arbitrary BitLength")
+	}
+	var f float32
+
+	c := (*b)[et.BytePosition:(int(et.BytePosition) + int(et.ByteLength))]
+	switch et.ByteLength {
+	case 1:
+		if et.Parameter == "SByte" || et.Parameter == "SInt" {
+			f = float32(int8(c[0]))
+		} else {
+			d := uint8(c[0])
+			if et.BitLength == 4 {
+				// Handle nibbles
+				if et.BitPosition == 0 {
+					d = d >> 4
+				} else if et.BitPosition == 4 {
+					d = d & 0xf
+				}
+			}
+			v = float32(d)
+		}
+	case 2:
+		h := 1
+		l := 0
+		if et.Parameter == "SIntHighByteFirst" || et.Parameter == "IntHighByteFirst" {
+			l = 1
+			h = 0
+		}
+		v = (uint16(c[h]) << 8) | uint16(c[l])
+		f = float32(v.(uint16))
+
+		if et.Parameter == "SInt" || et.Parameter == "SIntHighByteFirst" {
+			v = int16(v.(uint16))
+			f = float32(v.(int16))
+			fmt.Printf("\nf: %v\n", f)
+
+		}
+	case 3:
+		v = (uint32(c[2]) << 16) | (uint32(c[1]) << 8) | uint32(c[0])
+		f = float32(v.(uint32))
+	case 4:
+		v = (uint32(c[3]) << 24) | (uint32(c[2]) << 16) | (uint32(c[1]) << 8) | uint32(c[0])
+		f = float32(v.(uint32))
+		if et.Parameter == "SInt" || et.Parameter == "SInt4" {
+			v = int32(v.(uint32))
+			f = float32(v.(int32))
+		}
+	default:
+		return nil, fmt.Errorf("dateDivMulOffsetCodec: can not convert ByteLength %v", et.ByteLength)
+	}
+
+	return ((f * et.ConversionFactor) + et.ConversionOffset), nil
 }
+
 func (dateDivMulOffsetCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error) {
+	if len((*b)) < (int(et.BytePosition) + int(et.ByteLength)) {
+		return fmt.Errorf("dateDivMulOffsetCodec: Data length mismatch")
+	}
+
+	if (et.BitLength > 0) && !((et.ByteLength == 1) && (et.BitLength == 4)) {
+		return fmt.Errorf("dateDivMulOffsetCodec: Can not handle arbitrary BitLength")
+	}
+
+	var f float32
+
+	switch v.(type) {
+	case float32:
+		f = v.(float32)
+	case float64:
+		f = float32(v.(float32))
+	case int:
+		f = float32(v.(int))
+	case int8:
+		f = float32(v.(int8))
+	case int16:
+		f = float32(v.(int16))
+	case int32:
+		f = float32(v.(int32))
+	case int64:
+		f = float32(v.(int64))
+	case uint:
+		f = float32(v.(uint))
+	case uint8:
+		f = float32(v.(uint8))
+	case uint16:
+		f = float32(v.(uint16))
+	case uint32:
+		f = float32(v.(uint32))
+	case uint64:
+		f = float32(v.(uint64))
+	default:
+		return fmt.Errorf("Value must be a basic numeric type")
+	}
+
+	if et.LowerBorder != et.UpperBorder {
+		if f < et.LowerBorder {
+			f = et.LowerBorder
+		}
+		if f > et.UpperBorder {
+			f = et.UpperBorder
+		}
+	}
+
+	f = (f - et.ConversionOffset) / et.ConversionFactor
+
+	switch et.ByteLength {
+	case 1:
+		if et.Parameter == "SByte" || et.Parameter == "SInt" {
+			(*b)[et.BytePosition] = byte(int8(f))
+		} else {
+			d := uint8(f)
+			if et.BitLength == 4 {
+				// Handle nibbles
+				if et.BitPosition == 0 {
+					(*b)[et.BytePosition] = ((*b)[et.BytePosition] & 0xf) | (d << 4)
+				} else if et.BitPosition == 4 {
+					(*b)[et.BytePosition] = ((*b)[et.BytePosition] & 0xf0) | d
+				}
+			}
+		}
+	case 2:
+		var d interface{}
+		d = uint16(f)
+
+		if et.Parameter == "SInt" || et.Parameter == "SIntHighByteFirst" {
+			d = int16(f)
+		}
+		if et.Parameter == "SIntHighByteFirst" || et.Parameter == "IntHighByteFirst" {
+			(*b)[et.BytePosition+1] = byte(d.(int16) & 0xff)
+			(*b)[et.BytePosition] = byte(d.(int16) >> 8)
+		} else {
+			(*b)[et.BytePosition] = byte(d.(uint16) & 0xff)
+			(*b)[et.BytePosition+1] = byte(d.(uint16) >> 8)
+		}
+
+	case 3:
+		d := uint32(f)
+		(*b)[et.BytePosition] = byte(d & 0xff)
+		(*b)[et.BytePosition+1] = byte((d >> 8) & 0xff)
+		(*b)[et.BytePosition+2] = byte((d >> 16) & 0xff)
+	case 4:
+		if et.Parameter == "SInt" || et.Parameter == "SInt4" {
+			d := int32(f)
+			(*b)[et.BytePosition] = byte(d & 0xff)
+			(*b)[et.BytePosition+1] = byte((d >> 8) & 0xff)
+			(*b)[et.BytePosition+2] = byte((d >> 16) & 0xff)
+			(*b)[et.BytePosition+2] = byte((d >> 24) & 0xff)
+		} else {
+			d := uint32(f)
+			(*b)[et.BytePosition] = byte(d & 0xff)
+			(*b)[et.BytePosition+1] = byte((d >> 8) & 0xff)
+			(*b)[et.BytePosition+2] = byte((d >> 16) & 0xff)
+			(*b)[et.BytePosition+2] = byte((d >> 24) & 0xff)
+		}
+	default:
+		return fmt.Errorf("dateDivMulOffsetCodec: can not convert ByteLength %v", et.ByteLength)
+	}
+
+	//return ((f * et.ConversionFactor) + et.ConversionOffset), nil
 	return nil
 }
 
