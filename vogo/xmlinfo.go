@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -173,10 +174,13 @@ func FindEventTypes(xmlReader io.Reader, etl *EventTypeList) int {
 				if _, ok := (*etl)[et.ID]; !ok {
 					break
 				}
-				vet, _ := validatexEventType(et)
+				vet, err := validatexEventType(et)
+				if err != nil {
+					fmt.Println(err.Error())
+					break
+				}
 				(*etl)[et.ID] = &vet
 				found++
-
 			}
 		default:
 			//
@@ -190,9 +194,11 @@ func validatexEventType(xet xEventType) (EventType, error) {
 
 	et.ID = xet.ID
 	i, err := strconv.ParseUint(xet.Address, 0, 16)
-	if err == nil {
-		et.Address = uint16(i)
+	if err != nil {
+		return et, fmt.Errorf("Can't parse address '%v' of EventType %v", xet.Address, et.ID)
 	}
+	et.Address = uint16(i)
+
 	et.Description = xet.Description
 	et.FCRead = str2CmdType(xet.FCRead)
 	et.FCWrite = str2CmdType(xet.FCWrite)
@@ -242,32 +248,83 @@ func validatexEventType(xet xEventType) (EventType, error) {
 
 	et.Conversion = xet.Conversion
 
-	f, err := strconv.ParseFloat(xet.ConversionFactor, 32)
-	if err == nil {
+	f, errF := strconv.ParseFloat(xet.ConversionFactor, 32)
+	if errF == nil {
 		et.ConversionFactor = float32(f)
 	}
-	f, err = strconv.ParseFloat(xet.ConversionOffset, 32)
-	if err == nil {
+	f, errF = strconv.ParseFloat(xet.ConversionOffset, 32)
+	if errF == nil {
 		et.ConversionOffset = float32(f)
 	}
-	f, err = strconv.ParseFloat(xet.LowerBorder, 32)
-	if err == nil {
+	f, errF = strconv.ParseFloat(xet.LowerBorder, 32)
+	if errF == nil {
 		et.LowerBorder = float32(f)
 	}
-	f, err = strconv.ParseFloat(xet.UpperBorder, 32)
-	if err == nil {
+	f, errF = strconv.ParseFloat(xet.UpperBorder, 32)
+	if errF == nil {
 		et.UpperBorder = float32(f)
 	}
-	f, err = strconv.ParseFloat(xet.Stepping, 32)
-	if err == nil {
+	f, errF = strconv.ParseFloat(xet.Stepping, 32)
+	if errF == nil {
 		et.Stepping = float32(f)
 	}
 
 	et.ValueList = xet.ValueList
 	et.Unit = xet.Unit
 
-	if et.Conversion == "DateTimeBCD" {
-		et.Codec = dateTimeCodec{}
+	if et.BlockLength < et.BytePosition+et.ByteLength {
+		err = fmt.Errorf("BlockLength mismatch: BlockLength:%v < BytePosition:%v + ByteLength:%v", et.BlockLength, et.BytePosition, et.ByteLength)
+	}
+
+	// TODO: sort often used ones to top of switch statement
+	switch et.Conversion {
+	case "DateTimeBCD":
+		et.Codec = dateTimeBCDCodec{}
+	case "DateBCD":
+		et.Codec = dateBCDCodec{}
+	case "Sec2Hour":
+		et.Codec = sec2DurationCodec{}
+	case "Sec2Minute":
+		et.Codec = sec2DurationCodec{}
+	case "Div10":
+		et.Codec = dateDivMulOffsetCodec{}
+		et.ConversionFactor = 1.0 / 10
+	case "Div100":
+		et.Codec = dateDivMulOffsetCodec{}
+		et.ConversionFactor = 1.0 / 100
+	case "Div1000":
+		et.Codec = dateDivMulOffsetCodec{}
+		et.ConversionFactor = 1.0 / 1000
+	case "Div2":
+		et.Codec = dateDivMulOffsetCodec{}
+		et.ConversionFactor = 1.0 / 2
+	case "Mult10":
+		et.Codec = dateDivMulOffsetCodec{}
+		et.ConversionFactor = 10.0
+	case "Mult100":
+		et.Codec = dateDivMulOffsetCodec{}
+		et.ConversionFactor = 100.0
+	case "Mult2":
+		et.Codec = dateDivMulOffsetCodec{}
+		et.ConversionFactor = 2.0
+	case "Mult5":
+		et.Codec = dateDivMulOffsetCodec{}
+		et.ConversionFactor = 5.0
+	case "MultOffset":
+		et.Codec = dateDivMulOffsetCodec{}
+		// Fix missing value:
+		if et.ConversionFactor == 0 {
+			et.ConversionFactor = 1.0
+		}
+	case "MultOffsetBCD":
+		err = fmt.Errorf("Can't handle %v Conversion in EventType %v", et.Conversion, et.ID)
+	case "MultOffsetFloat":
+		err = fmt.Errorf("Can't handle %v Conversion in EventType %v", et.Conversion, et.ID)
+
+	default:
+		//et.Codec = nopCodec{}
+		err = fmt.Errorf("Can't handle %v Conversion in EventType %v", et.Conversion, et.ID)
+
 	}
 
 	return et, err

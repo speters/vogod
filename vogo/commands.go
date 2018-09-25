@@ -77,12 +77,6 @@ func newUUID() [16]byte {
 	return uuid
 }
 
-func (et *EventType) DecodeInt(b []byte) (data interface{}, typeHint string, err error) {
-	typeHint = "Int"
-	data = int(b[0])
-	return data, typeHint, nil
-}
-
 // VRead is the generic command to read Events of arbitrary data types
 func (o *Device) VRead(ID string) (data interface{}, err error) {
 	et, ok := o.DataPoint.EventTypes[ID]
@@ -91,9 +85,21 @@ func (o *Device) VRead(ID string) (data interface{}, err error) {
 	}
 
 	if et.FCRead == 0 {
-		return data, fmt.Errorf("EventType %v is not readable", et.ID)
+		return data, fmt.Errorf("EventType %v is not readable at address %v", et.ID, et.Address)
 	}
 
+	cmd := FsmCmd{ID: newUUID(), Command: et.FCRead, Address: addr2Bytes(et.Address), ResultLen: byte(et.BlockLength)}
+	res := o.RawCmd(cmd)
+
+	if res.Err != nil {
+		return data, res.Err
+	}
+
+	data, err = et.Codec.Decode(et, &res.Body)
+	return data, err
+}
+func (o *Device) oerkRead(ID string) (data interface{}, err error) {
+	et, _ := o.DataPoint.EventTypes[ID]
 	if et.BlockFactor > 0 {
 		switch et.MappingType {
 		case 1:
@@ -146,37 +152,6 @@ func (o *Device) VRead(ID string) (data interface{}, err error) {
 	}
 
 	return data, nil
-}
-
-func (o *Device) VReadByteArr(et *EventType) (b []byte, err error) {
-	return b, err
-}
-func (o *Device) VWriteByteArr(et *EventType, b []byte) (err error) {
-	return err
-}
-func (o *Device) VReadByte(et *EventType) (b byte, err error) {
-	return b, err
-}
-func (o *Device) VWriteByte(et *EventType, b byte) (err error) {
-	return err
-}
-func (o *Device) VReadInt32(et *EventType) (i int32, err error) {
-	return i, err
-}
-func (o *Device) VWriteInt32(et *EventType, i int32) (err error) {
-	return err
-}
-func (o *Device) VReadFloat32(et *EventType) (f float32, err error) {
-	return f, err
-}
-func (o *Device) VWriteFloat32(et *EventType, f float32) (err error) {
-	return err
-}
-func (o *Device) VReadTimeArr(et *EventType) (b []time.Time, err error) {
-	return b, err
-}
-func (o *Device) VWriteTimeArr(et *EventType, b []time.Time) (err error) {
-	return err
 }
 
 // VReadTime reads an EventType as time.Time value

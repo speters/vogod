@@ -85,13 +85,20 @@ func main() {
 		}
 	}
 
-	if true {
+	if false {
 		b, _ := conn.VReadTime("Uhrzeit~0x088E")
 		fmt.Printf("\nTIME: %v\n", b)
 		conn.VWriteTime("Uhrzeit~0x088E", time.Now())
 		b, _ = conn.VReadTime("Uhrzeit~0x088E")
 		fmt.Printf("\nTIME: %v\n", b)
 	}
+	t, _ := conn.VReadTime("Uhrzeit~0x088E")
+	fmt.Printf("\nTIME: %v\n", t)
+	b, err := conn.VRead("BetriebsstundenBrenner1~0x0886")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Printf("\nBetriebsstunden: %v\n", b)
 
 	// <-time.After(4 * time.Second)
 	// fmt.Println("Nö!")
