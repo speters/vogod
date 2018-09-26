@@ -94,17 +94,30 @@ func main() {
 	}
 	t, _ := conn.VReadTime("Uhrzeit~0x088E")
 	fmt.Printf("\nTIME: %v\n", t)
+
 	b, err := conn.VRead("BetriebsstundenBrenner1~0x0886")
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 	fmt.Printf("BetriebsstundenBrenner1~0x0886: %v\n", b)
 
+	n, err := conn.VRead("BedienteilBA_GWGA1~0x2323")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Printf("BedienteilBA_GWGA1~0x2323: %v\n", n)
+
 	f, err := conn.VRead("Gemischte_AT~0x5527")
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 	fmt.Printf("Gemischte_AT~0x5527: %v\n", f)
+
+	c, err := conn.VRead("ecnsysEventType~Error")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Printf("ecnsysEventType~Error: %#v\n", c)
 
 	// <-time.After(4 * time.Second)
 	// fmt.Println("Nö!")

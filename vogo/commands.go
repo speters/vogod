@@ -36,6 +36,9 @@ func (o *Device) getCache(addr uint16, len uint16) (b []byte, oldestCacheTime ti
 // RawCmd takes a raw FsmCmd and returns FsmResult
 // It makes use of caching. Set Device.CacheDuration to 0 to disable
 func (o *Device) RawCmd(cmd FsmCmd) FsmResult {
+	// Operate in chunks of chunkSize if cmd.ResultLen exceeds chunkSize
+	const chunkSize = 27
+
 	addr := bytes2Addr(cmd.Address)
 	now := time.Now()
 
@@ -46,18 +49,41 @@ func (o *Device) RawCmd(cmd FsmCmd) FsmResult {
 			return FsmResult{ID: cmd.ID, Err: nil, Body: c}
 		}
 	}
-	o.cmdChan <- cmd
-	result, _ := <-o.resChan
-	if result.Err == nil {
-		var t time.Time
-		if IsReadCmd(cmd.Command) {
-			t = now
+	var err error
+	i := 0
+	o.cmdLock.Lock()
+	var result FsmResult
+	var body []byte
+	for remainder := int(cmd.ResultLen); remainder > 0; remainder -= chunkSize {
+		if remainder > chunkSize {
+			cmd.ResultLen = chunkSize
+		} else {
+			cmd.ResultLen = byte(remainder)
 		}
+		o.cmdChan <- cmd
+		result, _ = <-o.resChan
+		if result.Err == nil {
+			var t time.Time
+			if IsReadCmd(cmd.Command) {
+				t = now
+			}
 
-		for i := uint16(0); i < uint16(len(result.Body)); i++ {
-			(*o.Mem)[addr+i] = &MemType{result.Body[i], t}
+			for i := uint16(0); i < uint16(len(result.Body)); i++ {
+				(*o.Mem)[addr+i] = &MemType{result.Body[i], t}
+			}
+		} else {
+			// Save an error for multi-block cmds
+			err = result.Err
 		}
+		body = append(body, result.Body...)
+
+		addr += chunkSize
+		i++
 	}
+	o.cmdLock.Unlock()
+
+	result.Err = err
+	result.Body = body
 	return result
 }
 
@@ -91,6 +117,7 @@ func (o *Device) VRead(ID string) (data interface{}, err error) {
 	cmd := FsmCmd{ID: newUUID(), Command: et.FCRead, Address: addr2Bytes(et.Address), ResultLen: byte(et.BlockLength)}
 	res := o.RawCmd(cmd)
 
+	// TODO: Plugin for result manipulation for e.g. ecnsysEventType~Error
 	if res.Err != nil {
 		return data, res.Err
 	}

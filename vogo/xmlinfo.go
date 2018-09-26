@@ -321,6 +321,23 @@ func validatexEventType(xet xEventType) (EventType, error) {
 	case "MultOffsetFloat":
 		err = fmt.Errorf("Can't handle %v Conversion in EventType %v", et.Conversion, et.ID)
 
+	case "NoConversion":
+		if len(et.ValueList) > 0 {
+			et.Codec = valueListCodec{}
+		} else if et.MappingType > 0 {
+			switch et.MappingType {
+			case 1:
+				et.Codec = mappingTime53{}
+			case 2:
+				et.Codec = mappingRaster152{}
+			case 3:
+				et.Codec = mappingErrors{}
+			default:
+				et.Codec = nopCodec{}
+			}
+		} else {
+			et.Codec = nopCodec{}
+		}
 	default:
 		//et.Codec = nopCodec{}
 		err = fmt.Errorf("Can't handle %v Conversion in EventType %v", et.Conversion, et.ID)

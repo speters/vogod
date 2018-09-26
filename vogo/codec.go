@@ -21,6 +21,33 @@ type nopCodec struct{}
 func (nopCodec) Decode(et *EventType, b *[]byte) (v interface{}, err error) { return (*b), nil }
 func (nopCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error) { return nil }
 
+type valueListCodec struct{}
+
+func (valueListCodec) Decode(et *EventType, b *[]byte) (v interface{}, err error) {
+	if et.BitLength > 8 {
+		return nil, fmt.Errorf("valueListCodec: can not handle BitLength > 8")
+	}
+
+	// While there are few EventTypes with ByteLength of 3, 4, 6, it seems sufficient to treat the ValueList as uint16
+	var d uint16
+
+	if et.BitLength > 0 {
+		// BytePosition seems not always correct in the data from Vit*soft, so calculate
+		bytepos := et.BitPosition / 8
+		// bitpos in bytepos' byte
+		bitpos := et.BitPosition % 8
+		d = uint16(((*b)[bytepos] >> bitpos) & ((1 << et.BitLength) - 1))
+	} else {
+		if et.ByteLength == 1 {
+			d = uint16((*b)[et.BytePosition])
+		} else {
+			d = (uint16((*b)[et.BytePosition+1]) << 8) | uint16((*b)[et.BytePosition])
+		}
+	}
+	return d, nil
+}
+func (valueListCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error) { return nil }
+
 type dateDivMulOffsetCodec struct{}
 
 func (dateDivMulOffsetCodec) Decode(et *EventType, b *[]byte) (v interface{}, err error) {
@@ -63,8 +90,6 @@ func (dateDivMulOffsetCodec) Decode(et *EventType, b *[]byte) (v interface{}, er
 		if et.Parameter == "SInt" || et.Parameter == "SIntHighByteFirst" {
 			v = int16(v.(uint16))
 			f = float32(v.(int16))
-			fmt.Printf("\nf: %v\n", f)
-
 		}
 	case 3:
 		v = (uint32(c[2]) << 16) | (uint32(c[1]) << 8) | uint32(c[0])
@@ -345,3 +370,58 @@ func (sec2DurationCodec) Encode(et *EventType, b *[]byte, v interface{}) (err er
 
 	return nil
 }
+
+/*
+// Codec mappingTime53
+Vier Schaltfenster mit je einem Ein- u. Ausschaltpunkt.
+Speicherung der Zeiten im 5+3 Format (Stunde + 10-Minuten Raster)
+
+Beispiel:
+   ByteLength 56 / BlockFactor 7 (jeder Tag) = 8 = 4*2 Schaltfenster
+   byte[0] : Schaltfenster 0 an
+   byte[1] : Schaltfenster 0 aus
+   byte[2] : Schaltfenster 1 an
+   byte[3] : Schaltfenster 1 aus
+   ...
+
+*/
+type mappingTime53 struct{}
+
+func (mappingTime53) Decode(et *EventType, b *[]byte) (v interface{}, err error) { return (*b), nil }
+func (mappingTime53) Encode(et *EventType, b *[]byte, v interface{}) (err error) { return nil }
+
+/*
+// Code mappingRaster152
+Timer 24h, für jede 1/4 Stunde 2 Bit.
+Werteliste:  0: Stand by
+            1: Reduziert
+            2: Normal
+            3: Festwert
+
+Beispiel:
+    ByteLength 186 / BlockFactor 7 = 24
+    2 Bit je 15min
+    Bit 0,1 = 0min..15min
+    Bit 2,3 = 15min..30min
+    Bit 4,5 = 30min..45min
+    Bit 6,7 = 45min..60min
+*/
+type mappingRaster152 struct{}
+
+func (mappingRaster152) Decode(et *EventType, b *[]byte) (v interface{}, err error) { return (*b), nil }
+func (mappingRaster152) Encode(et *EventType, b *[]byte, v interface{}) (err error) { return nil }
+
+/*
+// Codec mappingErrors
+   TODO: Format spec check
+   Fehlerhistorie
+   ByteLenght 90 / BlockFactor 10 =  9 Bytes / Eintrag
+   Byte 0 Fehler?, Bytes1..8 DateTimeBCD???
+
+*/
+type mappingErrors struct{}
+
+func (mappingErrors) Decode(et *EventType, b *[]byte) (v interface{}, err error) {
+	return (*b), nil
+}
+func (mappingErrors) Encode(et *EventType, b *[]byte, v interface{}) (err error) { return nil }

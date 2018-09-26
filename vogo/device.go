@@ -28,6 +28,7 @@ type Device struct {
 
 	cmdChan chan FsmCmd
 	resChan chan FsmResult
+	cmdLock sync.Mutex
 }
 
 const cacheDuration = 3 * time.Second
