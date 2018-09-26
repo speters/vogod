@@ -401,10 +401,10 @@ Werteliste:  0: Stand by
 Beispiel:
     ByteLength 186 / BlockFactor 7 = 24
     2 Bit je 15min
-    Bit 0,1 = 0min..15min
-    Bit 2,3 = 15min..30min
-    Bit 4,5 = 30min..45min
-    Bit 6,7 = 45min..60min
+    Bit 0,1 = 0min..<15min
+    Bit 2,3 = 15min..<30min
+    Bit 4,5 = 30min..<45min
+    Bit 6,7 = 45min..<60min
 */
 type mappingRaster152 struct{}
 
@@ -421,7 +421,25 @@ func (mappingRaster152) Encode(et *EventType, b *[]byte, v interface{}) (err err
 */
 type mappingErrors struct{}
 
+type ErrEntry struct {
+	errType byte
+	errDate time.Time
+}
+
+func (e ErrEntry) String() string {
+	return fmt.Sprintf("0x%0x: %v", e.errType, e.errDate)
+}
+
 func (mappingErrors) Decode(et *EventType, b *[]byte) (v interface{}, err error) {
-	return (*b), nil
+	e := []ErrEntry{}
+	var errNum byte
+	var errDate time.Time
+	for j := 0; j < len((*b)); j += 9 {
+		errNum = (*b)[j]
+		c := append([]byte{}, (*b)[j+1:j+8]...)
+		errDate, _ = decodeBCDDate(c)
+		e = append(e, ErrEntry{errNum, errDate})
+	}
+	return e, nil
 }
 func (mappingErrors) Encode(et *EventType, b *[]byte, v interface{}) (err error) { return nil }

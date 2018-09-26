@@ -113,11 +113,13 @@ func main() {
 	}
 	fmt.Printf("Gemischte_AT~0x5527: %v\n", f)
 
-	c, err := conn.VRead("ecnsysEventType~Error")
-	if err != nil {
-		fmt.Println(err.Error())
+	for i = 0; i < 10; i++ {
+		c, err := conn.VRead("ecnsysEventType~Error")
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		fmt.Printf("ecnsysEventType~Error: %v\n", c)
 	}
-	fmt.Printf("ecnsysEventType~Error: %#v\n", c)
 
 	// <-time.After(4 * time.Second)
 	// fmt.Println("Nö!")

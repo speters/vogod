@@ -35,9 +35,10 @@ func (o *Device) getCache(addr uint16, len uint16) (b []byte, oldestCacheTime ti
 
 // RawCmd takes a raw FsmCmd and returns FsmResult
 // It makes use of caching. Set Device.CacheDuration to 0 to disable
+// Operates in chunks of chunkSize if cmd.ResultLen exceeds chunkSize
+// TODO: Check if chunking at raw cmd level is save or if EventTypes should be split at a higher level
 func (o *Device) RawCmd(cmd FsmCmd) FsmResult {
-	// Operate in chunks of chunkSize if cmd.ResultLen exceeds chunkSize
-	const chunkSize = 27
+	const chunkSize = 36 // Quite arbitrarily chosen. Max is 37?
 
 	addr := bytes2Addr(cmd.Address)
 	now := time.Now()
