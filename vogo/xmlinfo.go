@@ -347,40 +347,6 @@ func validatexEventType(xet xEventType) (EventType, error) {
 	return et, err
 }
 
-// Conversion is the converter function to use
-/*
-   "DateBCD"
-   "DateMBus"
-   "DateTimeBCD"
-   "DateTimeMBus"
-   "DatenpunktADDR"
-   "Div10"
-   "Div100"
-   "Div1000"
-   "Div2"
-   "Estrich"
-   "HexByte2AsciiByte"
-   "HexByte2DecimalByte"
-   "HexToFloat"
-   "HourDiffSec2Hour"
-   "IPAddress"
-   "Kesselfolge"
-   "Mult10"
-   "Mult100"
-   "Mult2"
-   "Mult5"
-   "MultOffset"
-   "MultOffsetBCD"
-   "MultOffsetFloat"
-   "NoConversion"
-   "Phone2BCD"
-   "RotateBytes"
-   "Sec2Hour"
-   "Sec2Minute"
-   "Time53"
-   "UTCDiff2Month"
-*/
-
 func str2CmdType(s string) CommandType {
 	var c CommandType
 	var readWrite byte // 0 == undefined, 1 == read, 2 == write, 3==bidirectional/rpc
