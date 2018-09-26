@@ -40,6 +40,8 @@ func (o *Device) getCache(addr uint16, len uint16) (b []byte, oldestCacheTime ti
 func (o *Device) RawCmd(cmd FsmCmd) FsmResult {
 	const chunkSize = 32 // Max is 37?
 
+	o.cmdLock.Lock()
+	defer o.cmdLock.Unlock()
 	addr := bytes2Addr(cmd.Address)
 	now := time.Now()
 
@@ -52,7 +54,6 @@ func (o *Device) RawCmd(cmd FsmCmd) FsmResult {
 	}
 	var err error
 	i := 0
-	o.cmdLock.Lock()
 	var result FsmResult
 	var body []byte
 	for remainder := int(cmd.ResultLen); remainder > 0; remainder -= chunkSize {
@@ -81,11 +82,68 @@ func (o *Device) RawCmd(cmd FsmCmd) FsmResult {
 		addr += chunkSize
 		i++
 	}
-	o.cmdLock.Unlock()
-
 	result.Err = err
 	result.Body = body
 	return result
+}
+
+// RawCmds takes a raw FsmCmd... and returns []FsmResult
+// It works similar to RawCmd, but useful for combined read/writes, as it keeps the cmdLock during operations
+func (o *Device) RawCmds(cmds ...FsmCmd) []FsmResult {
+	const chunkSize = 32 // Max is 37?
+
+	ress := []FsmResult{}
+	o.cmdLock.Lock()
+	defer o.cmdLock.Unlock()
+	for n := 0; n < len(cmds); n++ {
+		cmd := cmds[n]
+		addr := bytes2Addr(cmd.Address)
+		now := time.Now()
+
+		if IsReadCmd(cmd.Command) && o.CacheDuration > 0 && cmd.ResultLen > 0 {
+			c, oldestCacheTime := o.getCache(addr, uint16(cmd.ResultLen))
+			if c != nil && now.Sub(oldestCacheTime) < o.CacheDuration {
+				log.Debugf("Cache hit for FsmCmd at addr: %v, Body: %# x", addr, c)
+				ress = append(ress, FsmResult{ID: cmd.ID, Err: nil, Body: c})
+				continue
+			}
+		}
+		var err error
+		i := 0
+
+		var result FsmResult
+		var body []byte
+		for remainder := int(cmd.ResultLen); remainder > 0; remainder -= chunkSize {
+			if remainder > chunkSize {
+				cmd.ResultLen = chunkSize
+			} else {
+				cmd.ResultLen = byte(remainder)
+			}
+			o.cmdChan <- cmd
+			result, _ = <-o.resChan
+			if result.Err == nil {
+				var t time.Time
+				if IsReadCmd(cmd.Command) {
+					t = now
+				}
+
+				for i := uint16(0); i < uint16(len(result.Body)); i++ {
+					(*o.Mem)[addr+i] = &MemType{result.Body[i], t}
+				}
+			} else {
+				// Save an error for multi-block cmds
+				err = result.Err
+			}
+			body = append(body, result.Body...)
+
+			addr += chunkSize
+			i++
+		}
+		result.Err = err
+		result.Body = body
+		ress = append(ress, result)
+	}
+	return ress
 }
 
 func (e *EventTypeList) getEventTypeByID(ID string) (et *EventType, err error) {
@@ -116,6 +174,8 @@ func (o *Device) VRead(ID string) (data interface{}, err error) {
 	}
 
 	cmd := FsmCmd{ID: newUUID(), Command: et.FCRead, Address: addr2Bytes(et.Address), ResultLen: byte(et.BlockLength)}
+	//ress := o.RawCmds(cmd)
+	//res := ress[0]
 	res := o.RawCmd(cmd)
 
 	// TODO: Plugin for result manipulation for e.g. ecnsysEventType~Error
