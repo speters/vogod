@@ -276,7 +276,7 @@ func (o *Device) VWriteTime(ID string, t time.Time) (err error) {
 	}
 
 	if et.FCWrite == 0 {
-		return fmt.Errorf("EventType %v is not readable", et.ID)
+		return fmt.Errorf("EventType %v is not writable", et.ID)
 	}
 
 	b := make([]byte, 8)
