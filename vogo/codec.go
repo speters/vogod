@@ -338,12 +338,15 @@ func (sec2DurationCodec) Decode(et *EventType, b *[]byte) (v interface{}, err er
 	}
 
 	secs = 0
-	for i := 0; i < int(et.ByteLength); i++ {
-		secs += uint((*b)[int(et.BytePosition)+i])
+	for i := int(et.ByteLength) - 1; i >= 0; i-- {
 		secs = secs << 8
+		secs += uint((*b)[int(et.BytePosition)+i])
 	}
 
 	t = time.Duration(secs) * time.Second
+
+	c := (*b)
+	et.Codec.Encode(et, &c, t)
 
 	return t, nil
 }
@@ -363,7 +366,7 @@ func (sec2DurationCodec) Encode(et *EventType, b *[]byte, v interface{}) (err er
 	}
 
 	secs = uint(t.Seconds())
-	for i := int(et.ByteLength) - 1; i >= 0; i++ {
+	for i := 0; i < int(et.ByteLength); i++ {
 		(*b)[int(et.BytePosition)+i] = byte(secs & 0xff)
 		secs = secs >> 8
 	}
