@@ -85,19 +85,3 @@ type MemType struct {
 	// Date of last refresh
 	CacheTime time.Time
 }
-
-/*
-type EventDecoder interface {
-	Decode(data *MemType, e *EventType) (val interface{}, err error)
-}
-type EventEncoder interface {
-	Encode(val interface{}, e *EventType) (data *MemType, err error)
-}
-
-func Decode(data *MemType, e *EventType) (val interface{}, err error) {
-	return val, err
-}
-func Encode(val interface{}, e *EventType) (data MemType, err error) {
-	return data, err
-}
-*/

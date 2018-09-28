@@ -26,9 +26,10 @@ type Device struct {
 	Mem           *MemMap
 	CacheDuration time.Duration
 
-	cmdChan chan FsmCmd
-	resChan chan FsmResult
-	cmdLock sync.Mutex
+	cmdChan  chan FsmCmd
+	resChan  chan FsmResult
+	cmdLock  sync.Mutex
+	cmdWLock sync.Mutex
 }
 
 const cacheDuration = 3 * time.Second

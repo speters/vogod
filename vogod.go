@@ -85,15 +85,13 @@ func main() {
 		}
 	}
 
-	if false {
-		b, _ := conn.VReadTime("Uhrzeit~0x088E")
+	if true {
+		b, _ := conn.VRead("Uhrzeit~0x088E")
 		fmt.Printf("\nTIME: %v\n", b)
-		conn.VWriteTime("Uhrzeit~0x088E", time.Now())
-		b, _ = conn.VReadTime("Uhrzeit~0x088E")
+		conn.VWrite("Uhrzeit~0x088E", time.Now())
+		b, _ = conn.VRead("Uhrzeit~0x088E")
 		fmt.Printf("\nTIME: %v\n", b)
 	}
-	t, _ := conn.VReadTime("Uhrzeit~0x088E")
-	fmt.Printf("\nTIME: %v\n", t)
 
 	b, err := conn.VRead("BetriebsstundenBrenner1~0x0886")
 	if err != nil {
@@ -113,7 +111,13 @@ func main() {
 	}
 	fmt.Printf("Gemischte_AT~0x5527: %v\n", f)
 
-	for i = 0; i < 10; i++ {
+	f, err = conn.VRead("Solarkollektortemperatur~0x6564")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Printf("Solarkollektortemperatur~0x6564: %v\n", f)
+
+	for i = 0; i < 0; i++ {
 		c, err := conn.VRead("ecnsysEventType~Error")
 		if err != nil {
 			fmt.Println(err.Error())
