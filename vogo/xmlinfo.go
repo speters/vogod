@@ -281,32 +281,35 @@ func validatexEventType(xet xEventType) (EventType, error) {
 		et.Codec = sec2DurationCodec{}
 	case "Sec2Minute":
 		et.Codec = sec2DurationCodec{}
+	case "HourDiffSec2Hour":
+		// TODO: Check if this is correct
+		et.Codec = sec2DurationCodec{}
 	case "Div10":
-		et.Codec = dateDivMulOffsetCodec{}
+		et.Codec = divMulOffsetCodec{}
 		et.ConversionFactor = 1.0 / 10
 	case "Div100":
-		et.Codec = dateDivMulOffsetCodec{}
+		et.Codec = divMulOffsetCodec{}
 		et.ConversionFactor = 1.0 / 100
 	case "Div1000":
-		et.Codec = dateDivMulOffsetCodec{}
+		et.Codec = divMulOffsetCodec{}
 		et.ConversionFactor = 1.0 / 1000
 	case "Div2":
-		et.Codec = dateDivMulOffsetCodec{}
+		et.Codec = divMulOffsetCodec{}
 		et.ConversionFactor = 1.0 / 2
 	case "Mult10":
-		et.Codec = dateDivMulOffsetCodec{}
+		et.Codec = divMulOffsetCodec{}
 		et.ConversionFactor = 10.0
 	case "Mult100":
-		et.Codec = dateDivMulOffsetCodec{}
+		et.Codec = divMulOffsetCodec{}
 		et.ConversionFactor = 100.0
 	case "Mult2":
-		et.Codec = dateDivMulOffsetCodec{}
+		et.Codec = divMulOffsetCodec{}
 		et.ConversionFactor = 2.0
 	case "Mult5":
-		et.Codec = dateDivMulOffsetCodec{}
+		et.Codec = divMulOffsetCodec{}
 		et.ConversionFactor = 5.0
 	case "MultOffset":
-		et.Codec = dateDivMulOffsetCodec{}
+		et.Codec = divMulOffsetCodec{}
 		// Fix missing value:
 		if et.ConversionFactor == 0 {
 			et.ConversionFactor = 1.0
@@ -330,6 +333,12 @@ func validatexEventType(xet xEventType) (EventType, error) {
 			default:
 				et.Codec = nopCodec{}
 			}
+		} else if et.ByteLength < 5 && et.BitLength == 0 {
+			// Fix missing value:
+			if et.ConversionFactor == 0 {
+				et.ConversionFactor = 1.0
+			}
+			et.Codec = divMulOffsetCodec{}
 		} else {
 			et.Codec = nopCodec{}
 		}

@@ -48,9 +48,9 @@ func (valueListCodec) Decode(et *EventType, b *[]byte) (v interface{}, err error
 }
 func (valueListCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error) { return nil }
 
-type dateDivMulOffsetCodec struct{}
+type divMulOffsetCodec struct{}
 
-func (dateDivMulOffsetCodec) Decode(et *EventType, b *[]byte) (v interface{}, err error) {
+func (divMulOffsetCodec) Decode(et *EventType, b *[]byte) (v interface{}, err error) {
 	if len((*b)) < (int(et.BytePosition) + int(et.ByteLength)) {
 		return nil, fmt.Errorf("dateDivMulOffsetCodec: Data length mismatch")
 	}
@@ -75,7 +75,7 @@ func (dateDivMulOffsetCodec) Decode(et *EventType, b *[]byte) (v interface{}, er
 					d = d & 0xf
 				}
 			}
-			v = float32(d)
+			f = float32(d)
 		}
 	case 2:
 		h := 1
@@ -108,7 +108,7 @@ func (dateDivMulOffsetCodec) Decode(et *EventType, b *[]byte) (v interface{}, er
 	return ((f * et.ConversionFactor) + et.ConversionOffset), nil
 }
 
-func (dateDivMulOffsetCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error) {
+func (divMulOffsetCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error) {
 	if len((*b)) < (int(et.BytePosition) + int(et.ByteLength)) {
 		return fmt.Errorf("dateDivMulOffsetCodec: Data length mismatch")
 	}

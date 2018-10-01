@@ -57,7 +57,7 @@ func (o *Device) RawCmds(cmds ...FsmCmd) []FsmResult {
 		if IsReadCmd(cmd.Command) && o.CacheDuration > 0 && cmd.ResultLen > 0 {
 			c, oldestCacheTime := o.getCache(addr, uint16(cmd.ResultLen))
 			if c != nil && now.Sub(oldestCacheTime) < o.CacheDuration {
-				log.Debugf("Cache hit for FsmCmd at addr: %v, Body: %# x", addr, c)
+				log.Debugf("Cache hit for FsmCmd at addr: %#x, Body: %# x", addr, c)
 				ress = append(ress, FsmResult{ID: cmd.ID, Err: nil, Body: c})
 				continue
 			}
@@ -128,8 +128,6 @@ func (o *Device) VRead(ID string) (data interface{}, err error) {
 	}
 
 	cmd := FsmCmd{ID: newUUID(), Command: et.FCRead, Address: addr2Bytes(et.Address), ResultLen: byte(et.BlockLength)}
-	//ress := o.RawCmds(cmd)
-	//res := ress[0]
 	res := o.RawCmd(cmd)
 
 	if res.Err != nil {
@@ -166,6 +164,7 @@ func (o *Device) VWrite(ID string, data interface{}) (err error) {
 	}
 
 	err = et.Codec.Encode(et, &res.Body, data)
+	fmt.Printf("\nres.Body:\n%#v\n\n", res.Body)
 
 	if err != nil {
 		return err

@@ -37,10 +37,13 @@ func GetEventTypes(w http.ResponseWriter, r *http.Request) {}
 func GetEvent(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	b, _ := conn.VRead(params["id"])
+	et, _ := conn.DataPoint.EventTypes[params["id"]]
 	var a string
-	a = fmt.Sprintf("%v\n", b)
+	a = fmt.Sprintf("%#v\n\n%v\n\n%#v\n\n", b, b, et)
 	fmt.Println(a)
-	json.NewEncoder(w).Encode(a)
+	w.Write([]byte(a))
+	//	json.NewEncoder(w).Encode(a)
+	json.NewEncoder(w).Encode(b)
 }
 
 func main() {
