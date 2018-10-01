@@ -339,6 +339,8 @@ func validatexEventType(xet xEventType) (EventType, error) {
 				et.ConversionFactor = 1.0
 			}
 			et.Codec = divMulOffsetCodec{}
+		} else if et.BlockLength == 9 && et.ID[0:11] == "FehlerHisFA" {
+			et.Codec = mappingErrors{}
 		} else {
 			et.Codec = nopCodec{}
 		}

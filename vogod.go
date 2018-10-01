@@ -36,8 +36,18 @@ var conn *vogo.Device
 func GetEventTypes(w http.ResponseWriter, r *http.Request) {}
 func GetEvent(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	b, _ := conn.VRead(params["id"])
-	et, _ := conn.DataPoint.EventTypes[params["id"]]
+	et, ok := conn.DataPoint.EventTypes[params["id"]]
+	if !ok {
+		w.WriteHeader(404)
+		w.Write([]byte(fmt.Sprintf("No such EventType %v", params["id"])))
+		return
+	}
+	b, err := conn.VRead(params["id"])
+	if err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(err.Error()))
+		return
+	}
 	var a string
 	a = fmt.Sprintf("%#v\n\n%v\n\n%#v\n\n", b, b, et)
 	fmt.Println(a)
