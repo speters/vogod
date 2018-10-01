@@ -204,7 +204,6 @@ func validatexEventType(xet xEventType) (EventType, error) {
 	et.FCWrite = str2CmdType(xet.FCWrite)
 
 	et.Parameter = xet.Parameter
-	et.SDKDataType = xet.SDKDataType
 
 	p, err := hex.DecodeString(xet.PrefixRead)
 	if err == nil {
@@ -263,10 +262,6 @@ func validatexEventType(xet xEventType) (EventType, error) {
 	f, errF = strconv.ParseFloat(xet.UpperBorder, 32)
 	if errF == nil {
 		et.UpperBorder = float32(f)
-	}
-	f, errF = strconv.ParseFloat(xet.Stepping, 32)
-	if errF == nil {
-		et.Stepping = float32(f)
 	}
 
 	et.ValueList = xet.ValueList

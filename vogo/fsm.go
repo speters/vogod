@@ -395,8 +395,8 @@ func (device *Device) vitoFsm() error { //, peer *io.ReadWriter, inChan <-chan b
 				if err == io.EOF {
 					return err
 				}
+				lastEnq = time.Now()
 			}
-			lastEnq = time.Now()
 		case sendKwStart:
 			if prevstate != recvKw {
 				_, err := device.Write([]byte{0x01})
@@ -493,8 +493,15 @@ func (device *Device) vitoFsm() error { //, peer *io.ReadWriter, inChan <-chan b
 						return fmt.Errorf("Reading on closed channel")
 					}
 					hasCmd = true
-				default:
-					hasCmd = false
+
+				case _, ok := <-c:
+					if !ok {
+						device.done <- struct{}{}
+					}
+					state = reset
+				case <-time.After(10 * time.Second):
+					// Emit a sync packet
+					state = swP300
 				}
 			}
 

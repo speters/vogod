@@ -16,29 +16,11 @@ type EventType struct {
 	Address     uint16
 	Description string
 
-	//AccessMode string // Redundant, see FCRead, FCWrite
 	FCRead  CommandType
 	FCWrite CommandType
 
-	Parameter   string // TODO: keep this or SDKDataType?
-	SDKDataType string
-	/*
-			SDKDataType string // Redundant, see Parameter
+	Parameter string
 
-		    SDKDataType <- Parameter
-			ByteArray   Array
-			ByteArray   Byte
-			Double      Int
-			Int         Int4
-			Int         IntHighByteFirst
-			Double      SByte
-			Int         SInt
-			Int         SInt4
-			Double      SIntHighByteFirst
-			ByteArray   String
-			ByteArray   StringCR
-			ByteArray   StringNT
-	*/
 	PrefixRead   []byte
 	PrefixWrite  []byte
 	BlockLength  uint8
@@ -51,19 +33,14 @@ type EventType struct {
 
 	ALZ string // AuslieferZuStand
 
-	// TODO: Could this be solved with function pointers?
-	// Textual representation of the conversion function
 	Conversion string
 
 	ConversionFactor float32
 	ConversionOffset float32
 	LowerBorder      float32
 	UpperBorder      float32
-	Stepping         float32 // TODO: check if this is given implicitely by conversion
 
-	// DataType         string // Redundant, is set to "OptionList" when ValueList is not empty
-	// OptionList       string
-	ValueList string
+	ValueList string // TODO: save as map[string]string or even map[uint32]string?
 	Unit      string
 
 	Codec Codec

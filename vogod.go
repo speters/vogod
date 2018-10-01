@@ -1,13 +1,19 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
+	"os/signal"
+	"runtime"
+	"runtime/pprof"
 	"strconv"
-	"time"
+	"syscall"
 
 	vogo "./vogo"
+	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -22,13 +28,66 @@ var getSysDeviceIdent vogo.FsmCmd = vogo.FsmCmd{ID: [16]byte{0, 1, 2, 3, 4, 5, 6
 var dpFile = flag.String("d", "ecnDataPointType.xml", "filename of ecnDataPointType.xml like file")
 var etFile = flag.String("e", "ecnEventType.xml", "filename of ecnEventType.xml like file")
 
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+
+var conn *vogo.Device
+
+func GetEventTypes(w http.ResponseWriter, r *http.Request) {}
+func GetEvent(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	b, _ := conn.VRead(params["id"])
+	var a string
+	a = fmt.Sprintf("%v\n", b)
+	fmt.Println(a)
+	json.NewEncoder(w).Encode(a)
+}
+
 func main() {
 	flag.Parse()
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+
 	addressHost := "orangepipc"
 	addressPort := 3002
 	address := addressHost + ":" + strconv.Itoa(addressPort)
 
-	conn := &vogo.Device{}
+	done := make(chan os.Signal, 1)
+
+	signal.Notify(done,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+
+	go func() {
+		_ = <-done
+
+		if *memprofile != "" {
+			f, err := os.Create(*memprofile)
+			if err != nil {
+				log.Fatal("could not create memory profile: ", err)
+			}
+			runtime.GC() // get up-to-date statistics
+			if err := pprof.WriteHeapProfile(f); err != nil {
+				log.Fatal("could not write memory profile: ", err)
+			}
+			f.Close()
+		}
+		pprof.StopCPUProfile()
+		os.Exit(0)
+	}()
+
+	conn = &vogo.Device{}
 	conn.Connect("socket://" + address)
 
 	conn.DataPoint = &vogo.DataPointType{}
@@ -78,56 +137,64 @@ func main() {
 
 	fmt.Printf("\nNum conn.DataPoint.EventTypes: %v\n", len(conn.DataPoint.EventTypes))
 
-	for i := 0; i < 100; i++ {
-		result := conn.RawCmd(getSysDeviceIdent)
-		if result.Err != nil {
-			return
+	router := mux.NewRouter()
+	router.HandleFunc("/eventtypes", GetEventTypes).Methods("GET")
+	router.HandleFunc("/get/{id}", GetEvent).Methods("GET")
+	//	router.HandleFunc("/people/{id}", CreatePerson).Methods("POST")
+	//router.HandleFunc("/people/{id}", DeletePerson).Methods("DELETE")
+	log.Fatal(http.ListenAndServe(":8000", router))
+
+	/*
+		for i := 0; i < 100; i++ {
+			result := conn.RawCmd(getSysDeviceIdent)
+			if result.Err != nil {
+				return
+			}
 		}
-	}
 
-	if true {
-		b, _ := conn.VRead("Uhrzeit~0x088E")
-		fmt.Printf("\nTIME: %v\n", b)
-		conn.VWrite("Uhrzeit~0x088E", time.Now())
-		b, _ = conn.VRead("Uhrzeit~0x088E")
-		fmt.Printf("\nTIME: %v\n", b)
-	}
+		if true {
+			b, _ := conn.VRead("Uhrzeit~0x088E")
+			fmt.Printf("\nTIME: %v\n", b)
+			conn.VWrite("Uhrzeit~0x088E", time.Now())
+			b, _ = conn.VRead("Uhrzeit~0x088E")
+			fmt.Printf("\nTIME: %v\n", b)
+		}
 
-	b, err := conn.VRead("BetriebsstundenBrenner1~0x0886")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	fmt.Printf("BetriebsstundenBrenner1~0x0886: %v\n", b)
-
-	n, err := conn.VRead("BedienteilBA_GWGA1~0x2323")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	fmt.Printf("BedienteilBA_GWGA1~0x2323: %v\n", n)
-
-	f, err := conn.VRead("Gemischte_AT~0x5527")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	fmt.Printf("Gemischte_AT~0x5527: %v\n", f)
-
-	f, err = conn.VRead("Solarkollektortemperatur~0x6564")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	fmt.Printf("Solarkollektortemperatur~0x6564: %v\n", f)
-
-	for i = 0; i < 0; i++ {
-		c, err := conn.VRead("ecnsysEventType~Error")
+		b, err := conn.VRead("BetriebsstundenBrenner1~0x0886")
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		fmt.Printf("ecnsysEventType~Error: %v\n", c)
-	}
+		fmt.Printf("BetriebsstundenBrenner1~0x0886: %v\n", b)
 
-	// <-time.After(4 * time.Second)
-	// fmt.Println("Nö!")
+		n, err := conn.VRead("BedienteilBA_GWGA1~0x2323")
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		fmt.Printf("BedienteilBA_GWGA1~0x2323: %v\n", n)
 
+		f, err := conn.VRead("Gemischte_AT~0x5527")
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		fmt.Printf("Gemischte_AT~0x5527: %v\n", f)
+
+		f, err = conn.VRead("Solarkollektortemperatur~0x6564")
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		fmt.Printf("Solarkollektortemperatur~0x6564: %v\n", f)
+
+		for i = 0; i < 0; i++ {
+			c, err := conn.VRead("ecnsysEventType~Error")
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			fmt.Printf("ecnsysEventType~Error: %v\n", c)
+		}
+
+		// <-time.After(4 * time.Second)
+		// fmt.Println("Nö!")
+	*/
 	/*
 		id := [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f} // uuid.NewV4()
 
