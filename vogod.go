@@ -27,13 +27,16 @@ var getSysDeviceIdent vogo.FsmCmd = vogo.FsmCmd{ID: [16]byte{0, 1, 2, 3, 4, 5, 6
 
 var dpFile = flag.String("d", "ecnDataPointType.xml", "filename of ecnDataPointType.xml like file")
 var etFile = flag.String("e", "ecnEventType.xml", "filename of ecnEventType.xml like file")
+var httpServe = flag.Bool("s", false, "start http server")
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 var conn *vogo.Device
 
-func GetEventTypes(w http.ResponseWriter, r *http.Request) {}
+func GetEventTypes(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode(conn.DataPoint.EventTypes)
+}
 func GetEvent(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	et, ok := conn.DataPoint.EventTypes[params["id"]]
@@ -141,7 +144,6 @@ func main() {
 		return
 	}
 
-	//fmt.Printf("num et: %v\n %#v\n", i, dpt.EventTypes)
 	if i != len(dpt.EventTypes) {
 		fmt.Printf("Attn: %v EventType definitions found, but %v announced in DataPoint %v definition", i, len(dpt.EventTypes), dpt.ID)
 	} else {
@@ -150,13 +152,14 @@ func main() {
 
 	fmt.Printf("\nNum conn.DataPoint.EventTypes: %v\n", len(conn.DataPoint.EventTypes))
 
-	router := mux.NewRouter()
-	router.HandleFunc("/eventtypes", GetEventTypes).Methods("GET")
-	router.HandleFunc("/get/{id}", GetEvent).Methods("GET")
-	//	router.HandleFunc("/people/{id}", CreatePerson).Methods("POST")
-	//router.HandleFunc("/people/{id}", DeletePerson).Methods("DELETE")
-	log.Fatal(http.ListenAndServe(":8000", router))
-
+	if *httpServe {
+		router := mux.NewRouter()
+		router.HandleFunc("/eventtypes", GetEventTypes).Methods("GET")
+		router.HandleFunc("/get/{id}", GetEvent).Methods("GET")
+		//	router.HandleFunc("/people/{id}", CreatePerson).Methods("POST")
+		//router.HandleFunc("/people/{id}", DeletePerson).Methods("DELETE")
+		log.Fatal(http.ListenAndServe(":8000", router))
+	}
 	/*
 		for i := 0; i < 100; i++ {
 			result := conn.RawCmd(getSysDeviceIdent)
@@ -178,13 +181,16 @@ func main() {
 			fmt.Println(err.Error())
 		}
 		fmt.Printf("BetriebsstundenBrenner1~0x0886: %v\n", b)
+	*/
+	n, err := conn.VRead("BedienteilBA_GWGA1~0x2323")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Printf("BedienteilBA_GWGA1~0x2323: %v\n", n)
 
-		n, err := conn.VRead("BedienteilBA_GWGA1~0x2323")
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		fmt.Printf("BedienteilBA_GWGA1~0x2323: %v\n", n)
+	conn.VWrite("BedienteilBA_GWGA1~0x2323", 2)
 
+	/*
 		f, err := conn.VRead("Gemischte_AT~0x5527")
 		if err != nil {
 			fmt.Println(err.Error())

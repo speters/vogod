@@ -41,8 +41,7 @@ func (o *Device) RawCmd(cmd FsmCmd) FsmResult {
 
 // RawCmds takes a raw FsmCmd... and returns []FsmResult
 // It makes use of caching. Set Device.CacheDuration to 0 to disable
-// Operates in chunks of chunkSize if cmd.ResultLen exceeds chunkSize
-// TODO: Check if chunking at raw cmd level is save or if EventTypes should be split at a higher level
+// ATTN: Operates in chunks of chunkSize if cmd.ResultLen exceeds chunkSize
 func (o *Device) RawCmds(cmds ...FsmCmd) []FsmResult {
 	const chunkSize = 32 // Max is 37?
 
@@ -127,14 +126,26 @@ func (o *Device) VRead(ID string) (data interface{}, err error) {
 		return data, fmt.Errorf("EventType %v is not readable at address %v", et.ID, et.Address)
 	}
 
-	cmd := FsmCmd{ID: newUUID(), Command: et.FCRead, Address: addr2Bytes(et.Address), ResultLen: byte(et.BlockLength)}
-	res := o.RawCmd(cmd)
-
-	if res.Err != nil {
-		return data, res.Err
+	step := et.BlockLength
+	if et.BlockFactor > 0 {
+		step = et.BlockLength / et.BlockFactor
 	}
 
-	data, err = et.Codec.Decode(et, &res.Body)
+	cmd := FsmCmd{ID: newUUID(), Command: et.FCRead, Address: addr2Bytes(et.Address), ResultLen: byte(step)}
+	var res FsmResult
+	b := []byte{}
+	for i := uint8(0); i < et.BlockLength; i += step {
+
+		cmd.Address = addr2Bytes(et.Address + uint16(i))
+		res = o.RawCmd(cmd)
+
+		b = append(b, res.Body...)
+		if res.Err != nil {
+			return data, res.Err
+		}
+	}
+
+	data, err = et.Codec.Decode(et, &b)
 	return data, err
 }
 
@@ -156,23 +167,39 @@ func (o *Device) VWrite(ID string, data interface{}) (err error) {
 	o.cmdWLock.Lock()
 	defer o.cmdWLock.Unlock()
 
-	cmd := FsmCmd{ID: newUUID(), Command: et.FCRead, Address: addr2Bytes(et.Address), ResultLen: byte(et.BlockLength)}
-	res := o.RawCmd(cmd)
-
-	if res.Err != nil {
-		return res.Err
+	//TODO: Chunked writes
+	step := et.BlockLength
+	if et.BlockFactor > 0 {
+		step = et.BlockLength / et.BlockFactor
 	}
 
-	err = et.Codec.Encode(et, &res.Body, data)
-	fmt.Printf("\nres.Body:\n%#v\n\n", res.Body)
+	cmd := FsmCmd{ID: newUUID(), Command: et.FCRead, Address: addr2Bytes(et.Address), ResultLen: byte(step)}
+	var res FsmResult
+	b := []byte{}
+	for i := uint8(0); i < et.BlockLength; i += step {
+
+		cmd.Address = addr2Bytes(et.Address + uint16(i))
+		res = o.RawCmd(cmd)
+		b = append(b, res.Body...)
+
+		if res.Err != nil {
+			return res.Err
+		}
+	}
+
+	err = et.Codec.Encode(et, &b, data)
+	fmt.Printf("\nres.Body:\n%#v\n\n", b)
 
 	if err != nil {
 		return err
 	}
 
 	cmd.Command = et.FCWrite
-	cmd.Args = res.Body
-	res = o.RawCmd(cmd)
+	for i := uint8(0); i < et.BlockLength; i += step {
+		cmd.Address = addr2Bytes(et.Address + uint16(i))
+		cmd.Args = b[i : i+step]
+		res = o.RawCmd(cmd)
+	}
 
 	return err
 }

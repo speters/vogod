@@ -2,6 +2,8 @@ package vogo
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
 	"time"
 )
 
@@ -20,6 +22,10 @@ type nopCodec struct{}
 
 func (nopCodec) Decode(et *EventType, b *[]byte) (v interface{}, err error) { return (*b), nil }
 func (nopCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error) { return nil }
+func (codec nopCodec) MarshalJSON() ([]byte, error) {
+	t := strings.Split(reflect.TypeOf(codec).String(), ".")
+	return []byte(fmt.Sprintf("\"%s\"", t[len(t)-1])), nil
+}
 
 type valueListCodec struct{}
 
@@ -46,7 +52,67 @@ func (valueListCodec) Decode(et *EventType, b *[]byte) (v interface{}, err error
 	}
 	return d, nil
 }
-func (valueListCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error) { return nil }
+func (valueListCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error) {
+	if et.BitLength > 8 {
+		return fmt.Errorf("valueListCodec: can not handle BitLength > 8")
+	}
+
+	// While there are few EventTypes with ByteLength of 3, 4, 6, it seems sufficient to treat the ValueList as uint16
+	var d uint16
+
+	switch v.(type) {
+	case float32:
+		d = uint16(v.(float32))
+	case float64:
+		d = uint16(v.(float64))
+	case int:
+		d = uint16(v.(int))
+	case int8:
+		d = uint16(v.(int8))
+	case int16:
+		d = uint16(v.(int16))
+	case int32:
+		d = uint16(v.(int32))
+	case int64:
+		d = uint16(v.(int64))
+	case uint:
+		d = uint16(v.(uint))
+	case uint8:
+		d = uint16(v.(uint8))
+	case uint16:
+		d = uint16(v.(uint16))
+	case uint32:
+		d = uint16(v.(uint32))
+	case uint64:
+		d = uint16(v.(uint64))
+	default:
+		return fmt.Errorf("Value must be a basic numeric type")
+	}
+
+	if et.BitLength > 0 {
+		// BytePosition seems not always correct in the data from Vit*soft, so calculate
+		bytepos := et.BitPosition / 8
+		// bitpos in bytepos' byte
+		bitpos := et.BitPosition % 8
+		e := (*b)[bytepos] &^ (((1 << et.BitLength) - 1) << bitpos)
+		f := byte(d) << bitpos
+		(*b)[bytepos] = e | f
+	} else {
+		if et.ByteLength == 1 {
+			(*b)[et.BytePosition] = byte(d)
+		} else {
+			(*b)[et.BytePosition+1] = byte(d >> 8)
+			(*b)[et.BytePosition] = byte(d & 0xff)
+		}
+	}
+
+	return nil
+}
+
+func (codec valueListCodec) MarshalJSON() ([]byte, error) {
+	t := strings.Split(reflect.TypeOf(codec).String(), ".")
+	return []byte(fmt.Sprintf("\"%s\"", t[len(t)-1])), nil
+}
 
 type divMulOffsetCodec struct{}
 
@@ -123,7 +189,7 @@ func (divMulOffsetCodec) Encode(et *EventType, b *[]byte, v interface{}) (err er
 	case float32:
 		f = v.(float32)
 	case float64:
-		f = float32(v.(float32))
+		f = float32(v.(float64))
 	case int:
 		f = float32(v.(int))
 	case int8:
@@ -216,6 +282,11 @@ func (divMulOffsetCodec) Encode(et *EventType, b *[]byte, v interface{}) (err er
 	return nil
 }
 
+func (codec divMulOffsetCodec) MarshalJSON() ([]byte, error) {
+	t := strings.Split(reflect.TypeOf(codec).String(), ".")
+	return []byte(fmt.Sprintf("\"%s\"", t[len(t)-1])), nil
+}
+
 type dateTimeBCDCodec struct{}
 
 func decodeBCDDate(c []byte) (t time.Time, err error) {
@@ -273,6 +344,11 @@ func (dateTimeBCDCodec) Encode(et *EventType, b *[]byte, v interface{}) (err err
 	return nil
 }
 
+func (codec dateTimeBCDCodec) MarshalJSON() ([]byte, error) {
+	t := strings.Split(reflect.TypeOf(codec).String(), ".")
+	return []byte(fmt.Sprintf("\"%s\"", t[len(t)-1])), nil
+}
+
 type dateBCDCodec struct{}
 
 func (dateBCDCodec) Decode(et *EventType, b *[]byte) (v interface{}, err error) {
@@ -327,6 +403,11 @@ func (dateBCDCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error) 
 	return nil
 }
 
+func (codec dateBCDCodec) MarshalJSON() ([]byte, error) {
+	t := strings.Split(reflect.TypeOf(codec).String(), ".")
+	return []byte(fmt.Sprintf("\"%s\"", t[len(t)-1])), nil
+}
+
 type sec2DurationCodec struct{}
 
 func (sec2DurationCodec) Decode(et *EventType, b *[]byte) (v interface{}, err error) {
@@ -374,6 +455,11 @@ func (sec2DurationCodec) Encode(et *EventType, b *[]byte, v interface{}) (err er
 	return nil
 }
 
+func (codec sec2DurationCodec) MarshalJSON() ([]byte, error) {
+	t := strings.Split(reflect.TypeOf(codec).String(), ".")
+	return []byte(fmt.Sprintf("\"%s\"", t[len(t)-1])), nil
+}
+
 /*
 // Codec mappingTime53
 Vier Schaltfenster mit je einem Ein- u. Ausschaltpunkt.
@@ -388,10 +474,70 @@ Beispiel:
    ...
 
 */
+type onoff53 struct {
+	on  time.Duration
+	off time.Duration
+}
+
+type onoff53d struct {
+	onHour uint8
+	onMin  uint8
+	off    time.Duration
+}
+
+func (t onoff53) String() string {
+	return fmt.Sprintf("%s .. %s", fmtDuration53(t.on), fmtDuration53(t.off))
+}
+
+func (t onoff53) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("[\"%s\", \"%s\"]", fmtDuration53(t.on), fmtDuration53(t.off))), nil
+}
+
+func fmtDuration53(d time.Duration) string {
+	d = d.Round(10 * time.Minute)
+	h := d / time.Hour
+	d -= h * time.Hour
+	m := d / time.Minute
+	return fmt.Sprintf("%02dh%02d", h, m)
+}
+
 type mappingTime53 struct{}
 
-func (mappingTime53) Decode(et *EventType, b *[]byte) (v interface{}, err error) { return (*b), nil }
+func Time532Duration(b byte) time.Duration {
+	return (time.Duration(b>>3) * time.Hour) + (time.Duration(b&7) * time.Minute * 10)
+}
+
+func (mappingTime53) Decode(et *EventType, b *[]byte) (v interface{}, err error) {
+	var t onoff53
+	var d []onoff53
+	var w [][]onoff53
+
+	chunkSize := (et.BlockLength / et.BlockFactor)
+	chunkNum := uint8(len(*b) / int(chunkSize))
+
+	if (len(*b) % int(chunkSize)) != 0 {
+		return v, fmt.Errorf("Codec mappingTime53 can not decode: data length is not a multiple of chunk size (%d)", chunkSize)
+	}
+
+	for i := uint8(0); i < chunkNum; i++ {
+		for j := uint8(0); j < (chunkSize - 1); j += 2 {
+			if (*b)[i*chunkSize+j] == 255 || (*b)[i*chunkSize+j+1] == 255 {
+				break
+			}
+			t = onoff53{on: Time532Duration((*b)[i*chunkSize+j]), off: Time532Duration((*b)[i*chunkSize+j+1])}
+			d = append(d, t)
+		}
+		w = append(w, d)
+		d = []onoff53{}
+	}
+
+	return w, nil
+}
 func (mappingTime53) Encode(et *EventType, b *[]byte, v interface{}) (err error) { return nil }
+func (codec mappingTime53) MarshalJSON() ([]byte, error) {
+	t := strings.Split(reflect.TypeOf(codec).String(), ".")
+	return []byte(fmt.Sprintf("\"%s\"", t[len(t)-1])), nil
+}
 
 /*
 // Code mappingRaster152
@@ -413,6 +559,10 @@ type mappingRaster152 struct{}
 
 func (mappingRaster152) Decode(et *EventType, b *[]byte) (v interface{}, err error) { return (*b), nil }
 func (mappingRaster152) Encode(et *EventType, b *[]byte, v interface{}) (err error) { return nil }
+func (codec mappingRaster152) MarshalJSON() ([]byte, error) {
+	t := strings.Split(reflect.TypeOf(codec).String(), ".")
+	return []byte(fmt.Sprintf("\"%s\"", t[len(t)-1])), nil
+}
 
 /*
 // Codec mappingErrors
@@ -433,10 +583,16 @@ func (e ErrEntry) String() string {
 	return fmt.Sprintf("0x%0x: %v", e.errType, e.errDate)
 }
 
+func (e ErrEntry) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("{ \"errtype\": \"%d\", \"errdate\": \"%s\" }", e.errType, e.errDate)), nil
+}
+
 func (mappingErrors) Decode(et *EventType, b *[]byte) (v interface{}, err error) {
 	e := []ErrEntry{}
 	var errNum byte
 	var errDate time.Time
+
+	fmt.Printf("\n%#v\n", b)
 	for j := 0; j < len((*b)); j += 9 {
 		errNum = (*b)[j]
 		c := append([]byte{}, (*b)[j+1:j+8]...)
@@ -446,3 +602,8 @@ func (mappingErrors) Decode(et *EventType, b *[]byte) (v interface{}, err error)
 	return e, nil
 }
 func (mappingErrors) Encode(et *EventType, b *[]byte, v interface{}) (err error) { return nil }
+
+func (codec mappingErrors) MarshalJSON() ([]byte, error) {
+	t := strings.Split(reflect.TypeOf(codec).String(), ".")
+	return []byte(fmt.Sprintf("\"%s\"", t[len(t)-1])), nil
+}
