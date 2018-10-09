@@ -18,10 +18,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func init() {
-	log.SetLevel(log.DebugLevel)
-}
-
 var getSysDeviceIdent vogo.FsmCmd = vogo.FsmCmd{ID: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}, Command: 0x01, Address: [2]byte{0x00, 0xf8}, Args: nil, ResultLen: 8}
 
 // const testDeviceIdent = [8]byte{0x20, 0x92, 0x01, 0x07, 0x00, 0x00, 0x01, 0x5a}
@@ -29,6 +25,7 @@ var getSysDeviceIdent vogo.FsmCmd = vogo.FsmCmd{ID: [16]byte{0, 1, 2, 3, 4, 5, 6
 var dpFile = flag.String("d", "ecnDataPointType.xml", "filename of ecnDataPointType.xml like file")
 var etFile = flag.String("e", "ecnEventType.xml", "filename of ecnEventType.xml like file")
 var httpServe = flag.Bool("s", false, "start http server")
+var verbose = flag.Bool("v", false, "verbose logging")
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
@@ -63,6 +60,13 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	flag.Parse()
+
+	if *verbose == true {
+		log.SetLevel(log.DebugLevel)
+		log.SetFormatter(&log.TextFormatter{
+			FullTimestamp: true,
+		})
+	}
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)

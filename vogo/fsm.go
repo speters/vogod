@@ -120,10 +120,6 @@ func isWriteCmd(c CommandType) bool {
 	return false
 }
 
-func init() {
-	log.SetLevel(log.DebugLevel)
-}
-
 // FsmCmd holds a command for the VitoFsm state machine
 type FsmCmd struct {
 	ID        [16]byte // uuid.UID
