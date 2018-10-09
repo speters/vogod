@@ -149,6 +149,7 @@ func Crc8(b []byte) byte {
 	return crc
 }
 
+// cmdSeq is used as a 3bit counter for telegram sequences
 var cmdSeq byte
 
 // prepareCmd prepares a KW or P300 byte sequence from a FsmCmd command
