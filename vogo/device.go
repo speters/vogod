@@ -20,7 +20,7 @@ type Device struct {
 	rlock, wlock sync.Mutex
 
 	connected bool
-	done      chan struct{}
+	Done      chan struct{}
 
 	DataPoint     *DataPointType
 	Mem           *MemMap
@@ -44,7 +44,7 @@ func (o *Device) Close() error {
 	defer o.wlock.Unlock()
 
 	select {
-	case <-o.done:
+	case <-o.Done:
 		// return fmt.Errorf("Close failed: Closing")
 		return io.ErrClosedPipe
 	default:
@@ -65,7 +65,7 @@ func (o *Device) Read(b []byte) (int, error) {
 	}
 
 	select {
-	case <-o.done:
+	case <-o.Done:
 		return 0, io.EOF
 	default:
 		n, err := o.r.Read(b)
@@ -82,7 +82,7 @@ func (o *Device) ReadByte() (byte, error) {
 		return 0, io.EOF
 	}
 	select {
-	case <-o.done:
+	case <-o.Done:
 		return 0, io.EOF
 	default:
 		return o.r.ReadByte()
@@ -97,7 +97,7 @@ func (o *Device) Peek(n int) ([]byte, error) {
 		return nil, io.EOF
 	}
 	select {
-	case <-o.done:
+	case <-o.Done:
 		return nil, io.EOF
 	default:
 		return o.r.Peek(n)
@@ -111,7 +111,7 @@ func (o *Device) Write(b []byte) (int, error) {
 		return 0, io.EOF
 	}
 	select {
-	case <-o.done:
+	case <-o.Done:
 		return 0, io.EOF
 	default:
 		n, err := o.conn.Write(b)
@@ -153,7 +153,7 @@ func (o *Device) Connect(link string) error {
 		return fmt.Errorf("Can not find a valid connection string in \"%v\"", link)
 	}
 	o.connected = true
-	o.done = make(chan struct{})
+	o.Done = make(chan struct{})
 	o.r = bufio.NewReader(o.conn)
 
 	o.cmdChan = make(chan FsmCmd)

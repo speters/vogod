@@ -223,7 +223,10 @@ func (device *Device) vitoFsm() error { //, peer *io.ReadWriter, inChan <-chan b
 	c := make(chan byte)
 	e := make(chan error)
 
-	defer func() { device.done <- struct{}{} }()
+	defer func() {
+		log.Warnf("Exiting vitoFSM")
+		device.Done <- struct{}{}
+	}()
 
 	failCount := 0
 	canP300 := true
@@ -289,18 +292,19 @@ func (device *Device) vitoFsm() error { //, peer *io.ReadWriter, inChan <-chan b
 		log.Warnf("Received unexpected byte sequence %x (expected %x)", b, w)
 		return failState, err
 	}
+
 	go func() {
 		b := make([]byte, 512)
 
-		select {
-		case <-device.done:
-			log.Debugf("Closing, returning from reading loop goroutine")
-
-			return
-		default:
-		}
-
 		for {
+			select {
+			case <-device.Done:
+				log.Debugf("Closing, returning from reading loop goroutine")
+
+				return
+			default:
+			}
+
 			n, err := device.Read(b[0:])
 			if err != nil {
 				e <- err
@@ -318,7 +322,7 @@ func (device *Device) vitoFsm() error { //, peer *io.ReadWriter, inChan <-chan b
 
 	for {
 		select {
-		case <-device.done:
+		case <-device.Done:
 			log.Debugf("Closing, returning from fsm")
 			return nil
 		default:
@@ -517,7 +521,7 @@ func (device *Device) vitoFsm() error { //, peer *io.ReadWriter, inChan <-chan b
 
 				case _, ok := <-c:
 					if !ok {
-						device.done <- struct{}{}
+						device.Done <- struct{}{}
 					}
 					state = reset
 				case <-time.After(10 * time.Second):

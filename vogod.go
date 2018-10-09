@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -100,7 +101,9 @@ func main() {
 			}
 			f.Close()
 		}
-		pprof.StopCPUProfile()
+		if *cpuprofile != "" {
+			pprof.StopCPUProfile()
+		}
 		os.Exit(0)
 	}()
 
@@ -153,6 +156,7 @@ func main() {
 
 	fmt.Printf("\nNum conn.DataPoint.EventTypes: %v\n", len(conn.DataPoint.EventTypes))
 
+	var h *http.Server
 	if *httpServe {
 		router := mux.NewRouter()
 		router.Handle("/", http.FileServer(http.Dir("./static/")))
@@ -160,8 +164,14 @@ func main() {
 		router.HandleFunc("/get/{id}", GetEvent).Methods("GET")
 		//	router.HandleFunc("/people/{id}", CreatePerson).Methods("POST")
 		//router.HandleFunc("/people/{id}", DeletePerson).Methods("DELETE")
-		log.Fatal(http.ListenAndServe(":8000", router))
+
+		h = &http.Server{Addr: ":8000", Handler: router}
+		go func() { log.Fatal(h.ListenAndServe()) }()
 	}
+	<-conn.Done
+
+	h.Shutdown(context.Background())
+
 	/*
 		for i := 0; i < 100; i++ {
 			result := conn.RawCmd(getSysDeviceIdent)
@@ -184,14 +194,15 @@ func main() {
 		}
 		fmt.Printf("BetriebsstundenBrenner1~0x0886: %v\n", b)
 	*/
-	n, err := conn.VRead("BedienteilBA_GWGA1~0x2323")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	fmt.Printf("BedienteilBA_GWGA1~0x2323: %v\n", n)
+	/*
+		n, err := conn.VRead("BedienteilBA_GWGA1~0x2323")
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		fmt.Printf("BedienteilBA_GWGA1~0x2323: %v\n", n)
 
-	conn.VWrite("BedienteilBA_GWGA1~0x2323", 2)
-
+		conn.VWrite("BedienteilBA_GWGA1~0x2323", 2)
+	*/
 	/*
 		f, err := conn.VRead("Gemischte_AT~0x5527")
 		if err != nil {
