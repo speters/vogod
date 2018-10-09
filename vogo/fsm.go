@@ -40,7 +40,7 @@ const (
 	recvKw
 	swP300  // Send SYN NUL NUL / 0x16 0x00 0x00 to switch to P300
 	waitAck // Wait for ACK / 0x06
-	wait    // Occasionally send SNY NUL NULL
+	wait    // Occasionally send SYN NUL NULL
 	sendP300
 	sendP300Ack
 	recvP300
