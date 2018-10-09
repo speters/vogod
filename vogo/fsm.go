@@ -101,11 +101,17 @@ func IsReadCmd(c CommandType) bool {
 	if _, ok := readCmds[c]; ok {
 		return true
 	}
+	if (c & 0x1f) == p300ReadData {
+		return true
+	}
 	return false
 }
 
 func IsWriteCmd(c CommandType) bool {
 	if _, ok := writeCmds[c]; ok {
+		return true
+	}
+	if (c & 0x1f) == p300WriteData {
 		return true
 	}
 	return false
@@ -140,6 +146,8 @@ func Crc8(b []byte) byte {
 	return crc
 }
 
+var cmdSeq byte
+
 // prepareCmd prepares a KW or P300 byte sequence from a FsmCmd command
 func prepareCmd(cmd *FsmCmd, state VitoState) (b []byte, err error) {
 	if state == sendP300 {
@@ -164,6 +172,11 @@ func prepareCmd(cmd *FsmCmd, state VitoState) (b []byte, err error) {
 			err = fmt.Errorf("Not implemented: %v (GWG protocol?)", cmd.Command)
 			return nil, err
 		}
+
+		// Introduce command sequence counter bits as VitoConnect does
+		b[3] = b[3] | (cmdSeq << 5)
+		cmdSeq++
+
 		crc := Crc8(b[1:]) // Omit start byte
 		b = append(b, crc)
 
@@ -203,6 +216,8 @@ func (device *Device) vitoFsm() error { //, peer *io.ReadWriter, inChan <-chan b
 	lastSyn, lastEnq := time.Now(), time.Now()
 	c := make(chan byte)
 	e := make(chan error)
+
+	defer func() { device.done <- struct{}{} }()
 
 	failCount := 0
 	canP300 := true
@@ -590,7 +605,8 @@ func (device *Device) vitoFsm() error { //, peer *io.ReadWriter, inChan <-chan b
 				device.resChan <- FsmResult{cmd.ID, err, nil}
 				break
 			}
-			if telegramPart2[1] != byte(cmd.Command) {
+			// cmd.Command & 0x1F to strip the sequence counting bits in some protocol implementations
+			if (telegramPart2[1] & 0x1F) != byte(cmd.Command) {
 				err = fmt.Errorf("Wrong command byte (expected %x, received %x)", telegramPart2[1], byte(cmd.Command))
 				device.resChan <- FsmResult{cmd.ID, err, nil}
 				break

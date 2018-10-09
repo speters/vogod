@@ -569,7 +569,7 @@ func (codec mappingRaster152) MarshalJSON() ([]byte, error) {
    TODO: Format spec check
    Fehlerhistorie
    ByteLenght 90 / BlockFactor 10 =  9 Bytes / Eintrag
-   Byte 0 Fehler?, Bytes1..8 DateTimeBCD???
+   Byte 0 Fehler?, Bytes1..8 DateTimeBCD
 
 */
 type mappingErrors struct{}
@@ -592,7 +592,6 @@ func (mappingErrors) Decode(et *EventType, b *[]byte) (v interface{}, err error)
 	var errNum byte
 	var errDate time.Time
 
-	fmt.Printf("\n%#v\n", b)
 	for j := 0; j < len((*b)); j += 9 {
 		errNum = (*b)[j]
 		c := append([]byte{}, (*b)[j+1:j+8]...)

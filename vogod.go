@@ -35,7 +35,9 @@ var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 var conn *vogo.Device
 
 func GetEventTypes(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(conn.DataPoint.EventTypes)
+	e := json.NewEncoder(w)
+	e.SetIndent("", "    ")
+	e.Encode(conn.DataPoint.EventTypes)
 }
 func GetEvent(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
@@ -51,12 +53,11 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 		return
 	}
-	var a string
-	a = fmt.Sprintf("%#v\n\n%v\n\n%#v\n\n", b, b, et)
-	fmt.Println(a)
-	w.Write([]byte(a))
-	//	json.NewEncoder(w).Encode(a)
-	json.NewEncoder(w).Encode(b)
+
+	e := json.NewEncoder(w)
+	e.SetIndent("", "    ")
+	et.Value = b
+	e.Encode(et)
 }
 
 func main() {
@@ -154,6 +155,7 @@ func main() {
 
 	if *httpServe {
 		router := mux.NewRouter()
+		router.Handle("/", http.FileServer(http.Dir("./static/")))
 		router.HandleFunc("/eventtypes", GetEventTypes).Methods("GET")
 		router.HandleFunc("/get/{id}", GetEvent).Methods("GET")
 		//	router.HandleFunc("/people/{id}", CreatePerson).Methods("POST")

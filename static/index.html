@@ -1,0 +1,155 @@
+<html>
+<head>
+<script src="https://code.jquery.com/jquery-latest.js"></script>
+<!-- Latest compiled JavaScript -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<style>
+.container { margin-top: 10px; }
+
+.progress-bar-vertical {
+  width: 20px;
+  min-height: 100px;
+  display: flex;
+  align-items: flex-end;
+  margin-right: 20px;
+  float: left;
+}
+
+.progress-bar-vertical .progress-bar {
+  width: 100%;
+  height: 0;
+  -webkit-transition: height 0.6s ease;
+  -o-transition: height 0.6s ease;
+  transition: height 0.6s ease;
+}
+
+</style>
+<script type="text/javascript">
+function update_vals(){
+     $.getJSON("./get/Solarkollektortemperatur~0x6564", function (json) {
+        var value = json.Value;
+        var percentvalue = Math.round((value/120)*100) + '%';
+        $('.progress-bar').css('height', percentvalue);
+        $('#tempSolar').html(value.toFixed(1)+json.Unit);
+    });
+    $.getJSON("./get/TiefpassTemperaturwert_ATS~0x5525", function (json) {
+        $('#tempAussen').html(json.Value.toFixed(1)+json.Unit);
+    })
+    $.getJSON("./get/BedienRTSolltemperaturA1M1~0x2306", function (json) {
+        $('#tempInnen').html(json.Value.toFixed(1)+json.Unit);
+    })
+};
+update_vals();
+
+var interval = setInterval(update_vals, 10000);
+$(
+    //update_vals()
+);
+</script>
+</head>
+<body>
+    <div id="homePic">
+        <svg
+           xmlns:dc="http://purl.org/dc/elements/1.1/"
+           xmlns:cc="http://creativecommons.org/ns#"
+           xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+           xmlns:svg="http://www.w3.org/2000/svg"
+           xmlns="http://www.w3.org/2000/svg"
+           xmlns:xlink="http://www.w3.org/1999/xlink"
+           version="1.1"
+           id="svg2"
+           viewBox="0 0 744.09448819 1052.3622047"
+           height="297mm"
+           width="210mm">
+          <defs
+             id="defs4">
+            <linearGradient
+               id="linearGradient4180">
+              <stop
+                 id="stop4182"
+                 offset="0"
+                 style="stop-color:#cccccc;stop-opacity:1;" />
+              <stop
+                 id="stop4184"
+                 offset="1"
+                 style="stop-color:#737373;stop-opacity:0.99607843" />
+            </linearGradient>
+            <linearGradient
+               id="linearGradient4170">
+              <stop
+                 id="stop4172"
+                 offset="0"
+                 style="stop-color:#eaeaea;stop-opacity:1" />
+              <stop
+                 id="stop4174"
+                 offset="1"
+                 style="stop-color:#cccccc;stop-opacity:1" />
+            </linearGradient>
+            <linearGradient
+               gradientTransform="translate(-66.002884,22.220355)"
+               gradientUnits="userSpaceOnUse"
+               y2="165.44827"
+               x2="484.87323"
+               y1="159.38734"
+               x1="388.90872"
+               id="linearGradient4176"
+               xlink:href="#linearGradient4170" />
+            <linearGradient
+               gradientTransform="translate(8.5714286,-1.4285714)"
+               gradientUnits="userSpaceOnUse"
+               y2="275.21936"
+               x2="163.92857"
+               y1="398.07648"
+               x1="138.57143"
+               id="linearGradient4186"
+               xlink:href="#linearGradient4180" />
+          </defs>
+          <g
+             id="layer1">
+            <g
+               id="g4188">
+              <path
+                 id="path4157"
+                 d="m 141.55528,276.85636 39.08395,-19.93983 0.85928,152.28459 -40.21312,24.65515 z"
+                 style="fill:url(#linearGradient4186);fill-opacity:1" />
+              <path
+                 id="path4159"
+                 d="m 141.56131,276.86106 36.58259,-26.37978 180.62602,-93.82952 73.76598,33.41952 -18.51445,0.39556 -54.88365,-24.57142 z"
+                 style="fill:url(#linearGradient4176);fill-opacity:1" />
+            </g>
+            <text
+               id="text4192"
+               y="342.80362"
+               x="235"
+               style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+               xml:space="preserve"><tspan
+                 style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:60px;font-family:'Roboto Mono Medium for Powerline';-inkscape-font-specification:'Roboto Mono Medium for Powerline Medium'"
+                 y="342.80362"
+                 x="235"
+                 id="tempInnen">__°C</tspan></text>
+            <text
+               xml:space="preserve"
+               style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+               x="179"
+               y="191.36221"
+               id="text4196"><tspan
+                 id="tempSolar"
+                 x="179"
+                 y="191.36221"
+                 style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:35px;font-family:'Roboto Mono Medium for Powerline';-inkscape-font-specification:'Roboto Mono Medium for Powerline Medium'">__°C</tspan></text>
+            <text
+               id="text4200"
+               y="330.36221"
+               x="45"
+               style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+               xml:space="preserve"><tspan
+                 style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:35px;font-family:'Roboto Mono Medium for Powerline';-inkscape-font-specification:'Roboto Mono Medium for Powerline Medium'"
+                 y="330.36221"
+                 x="45"
+                 id="tempAussen">__°C</tspan></text>
+          </g>
+        </svg>
+    </div>
+</body>
+</html>
