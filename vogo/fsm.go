@@ -10,6 +10,9 @@ import (
 
 //go:generate stringer -type VitoState,CommandType
 
+// useSeqCnt == true includes a 3bit counter into bits 7,6,5 of the 4th telegram Byte as done by VitoConnect
+const useSeqCnt bool = false
+
 // Constants for OptoLink communications in GWG, KW, and P300 protocols
 const (
 	NUL byte = 0x00 // Used as part of P300SYN
@@ -173,9 +176,11 @@ func prepareCmd(cmd *FsmCmd, state VitoState) (b []byte, err error) {
 			return nil, err
 		}
 
-		// Introduce command sequence counter bits as VitoConnect does
-		b[3] = b[3] | (cmdSeq << 5)
-		cmdSeq++
+		if useSeqCnt {
+			// Introduce command sequence counter bits as VitoConnect does
+			b[3] = b[3] | (cmdSeq << 5)
+			cmdSeq++
+		}
 
 		crc := Crc8(b[1:]) // Omit start byte
 		b = append(b, crc)
