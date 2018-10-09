@@ -2,6 +2,7 @@ package vogo
 
 import (
 	"fmt"
+	"io"
 	"math/rand"
 	"time"
 
@@ -53,7 +54,7 @@ func (o *Device) RawCmds(cmds ...FsmCmd) []FsmResult {
 		addr := bytes2Addr(cmd.Address)
 		now := time.Now()
 
-		if IsReadCmd(cmd.Command) && o.CacheDuration > 0 && cmd.ResultLen > 0 {
+		if isReadCmd(cmd.Command) && o.CacheDuration > 0 && cmd.ResultLen > 0 {
 			c, oldestCacheTime := o.getCache(addr, uint16(cmd.ResultLen))
 			if c != nil && now.Sub(oldestCacheTime) < o.CacheDuration {
 				log.Debugf("Cache hit for FsmCmd at addr: %#x, Body: %# x", addr, c)
@@ -72,11 +73,20 @@ func (o *Device) RawCmds(cmds ...FsmCmd) []FsmResult {
 			} else {
 				cmd.ResultLen = byte(remainder)
 			}
-			o.cmdChan <- cmd
-			result, _ = <-o.resChan
+			select {
+			case o.cmdChan <- cmd:
+				break
+			case <-time.After(10 * time.Second):
+				log.Errorf("Device not connected")
+				return []FsmResult{FsmResult{Err: io.EOF}}
+			}
+			result, ok := <-o.resChan
+			if !ok {
+				return []FsmResult{FsmResult{Err: io.EOF}}
+			}
 			if result.Err == nil {
 				var t time.Time
-				if IsReadCmd(cmd.Command) {
+				if isReadCmd(cmd.Command) {
 					t = now
 				}
 
@@ -202,11 +212,4 @@ func (o *Device) VWrite(ID string, data interface{}) (err error) {
 	}
 
 	return err
-}
-
-func fromBCD(b byte) int {
-	return ((int(b)>>4)*10 + (int(b) & 0x0f))
-}
-func toBCD(i int) byte {
-	return byte(((i) / 10 * 16) + ((i) % 10))
 }

@@ -97,7 +97,7 @@ var writeCmds = map[CommandType]bool{
 	physicalBeWrite:   true,
 }
 
-func IsReadCmd(c CommandType) bool {
+func isReadCmd(c CommandType) bool {
 	if _, ok := readCmds[c]; ok {
 		return true
 	}
@@ -107,7 +107,7 @@ func IsReadCmd(c CommandType) bool {
 	return false
 }
 
-func IsWriteCmd(c CommandType) bool {
+func isWriteCmd(c CommandType) bool {
 	if _, ok := writeCmds[c]; ok {
 		return true
 	}

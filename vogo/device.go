@@ -170,6 +170,3 @@ func (o *Device) Connect(link string) error {
 
 	return nil
 }
-
-func bytes2Addr(a [2]byte) uint16 { return uint16(a[0])<<8 + uint16(a[1]) }
-func addr2Bytes(a uint16) [2]byte { return [2]byte{byte(a >> 8), byte(a & 0xff)} }

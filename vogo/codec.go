@@ -606,3 +606,13 @@ func (codec mappingErrors) MarshalJSON() ([]byte, error) {
 	t := strings.Split(reflect.TypeOf(codec).String(), ".")
 	return []byte(fmt.Sprintf("\"%s\"", t[len(t)-1])), nil
 }
+
+func fromBCD(b byte) int {
+	return ((int(b)>>4)*10 + (int(b) & 0x0f))
+}
+func toBCD(i int) byte {
+	return byte(((i) / 10 * 16) + ((i) % 10))
+}
+
+func bytes2Addr(a [2]byte) uint16 { return uint16(a[0])<<8 + uint16(a[1]) }
+func addr2Bytes(a uint16) [2]byte { return [2]byte{byte(a >> 8), byte(a & 0xff)} }
