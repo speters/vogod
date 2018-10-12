@@ -27,16 +27,16 @@
 </style>
 <script type="text/javascript">
 function update_vals(){
-     $.getJSON("./get/Solarkollektortemperatur~0x6564", function (json) {
+     $.getJSON("./event/Solarkollektortemperatur~0x6564", function (json) {
         var value = json.Value;
         var percentvalue = Math.round((value/120)*100) + '%';
         $('.progress-bar').css('height', percentvalue);
         $('#tempSolar').html(value.toFixed(1)+json.Unit);
     });
-    $.getJSON("./get/TiefpassTemperaturwert_ATS~0x5525", function (json) {
+    $.getJSON("./event/TiefpassTemperaturwert_ATS~0x5525", function (json) {
         $('#tempAussen').html(json.Value.toFixed(1)+json.Unit);
     })
-    $.getJSON("./get/BedienRTSolltemperaturA1M1~0x2306", function (json) {
+    $.getJSON("./event/BedienRTSolltemperaturA1M1~0x2306", function (json) {
         $('#tempInnen').html(json.Value.toFixed(1)+json.Unit);
     })
 };
@@ -49,7 +49,7 @@ $(
 </script>
 </head>
 <body>
-    <div id="homePic">
+    <div id="homePic" style="max-width: 600px">
         <svg
            xmlns:dc="http://purl.org/dc/elements/1.1/"
            xmlns:cc="http://creativecommons.org/ns#"
@@ -60,8 +60,8 @@ $(
            version="1.1"
            id="svg2"
            viewBox="0 0 744.09448819 1052.3622047"
-           height="297mm"
-           width="210mm">
+           x:height="297mm"
+           x:width="210mm">
           <defs
              id="defs4">
             <linearGradient

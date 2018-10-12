@@ -14,6 +14,7 @@ import (
 	"syscall"
 
 	vogo "./vogo"
+	"github.com/gobuffalo/packr"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
@@ -92,7 +93,7 @@ func main() {
 		syscall.SIGQUIT)
 
 	go func() {
-		_ = <-done
+		<-done
 
 		if *memprofile != "" {
 			f, err := os.Create(*memprofile)
@@ -111,7 +112,7 @@ func main() {
 		os.Exit(0)
 	}()
 
-	conn = &vogo.Device{}
+	conn = vogo.NewDevice()
 	conn.Connect("socket://" + address)
 
 	conn.DataPoint = &vogo.DataPointType{}
@@ -128,53 +129,54 @@ func main() {
 
 	xmlFile, err := os.Open(*dpFile)
 	if err != nil {
-		fmt.Println("Error opening file:", err)
+		log.Errorf("Error opening file: %s", err)
 		return
 	}
 
 	err = vogo.FindDataPointType(xmlFile, sysDeviceID, dpt)
 	xmlFile.Close()
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Errorf(err.Error())
 		return
 	}
 
 	xmlFile, err = os.Open(*etFile)
 	if err != nil {
-		fmt.Println("Error opening file:", err)
+		log.Errorf("Error opening file: %s", err)
 		return
 	}
 
 	i := vogo.FindEventTypes(xmlFile, &dpt.EventTypes)
 	xmlFile.Close()
 	if i == 0 {
-		fmt.Printf("No EventType definitions found for this DataPoint %v\n", sysDeviceID[:6])
+		log.Errorf("No EventType definitions found for this DataPoint %v\n", sysDeviceID[:6])
 		return
 	}
 
 	if i != len(dpt.EventTypes) {
-		fmt.Printf("Attn: %v EventType definitions found, but %v announced in DataPoint %v definition", i, len(dpt.EventTypes), dpt.ID)
+		log.Infof("Attn: %v EventType definitions found, but %v announced in DataPoint %v definition", i, len(dpt.EventTypes), dpt.ID)
 	} else {
-		fmt.Printf("All %v EventTypes found for DataPoint %v\n", i, dpt.ID)
+		log.Infof("All %v EventTypes found for DataPoint %v\n", i, dpt.ID)
 	}
-
-	fmt.Printf("\nNum conn.DataPoint.EventTypes: %v\n", len(conn.DataPoint.EventTypes))
 
 	var h *http.Server
 	if *httpServe {
 		router := mux.NewRouter()
-		router.Handle("/", http.FileServer(http.Dir("./static/")))
+		box := packr.NewBox("./static")
+		router.Handle("/", http.FileServer(box))
+		// router.Handle("/user", http.FileServer(http.Dir("./static/")))
 		router.HandleFunc("/eventtypes", GetEventTypes).Methods("GET")
-		router.HandleFunc("/get/{id}", GetEvent).Methods("GET")
-		//	router.HandleFunc("/people/{id}", CreatePerson).Methods("POST")
-		//router.HandleFunc("/people/{id}", DeletePerson).Methods("DELETE")
+		router.HandleFunc("/event/{id}", GetEvent).Methods("GET")
+		//	router.HandleFunc("/event/{id}", SetEvent).Methods("POST")
 
 		h = &http.Server{Addr: ":8000", Handler: router}
 		go func() { log.Fatal(h.ListenAndServe()) }()
 	}
 	<-conn.Done
 
-	h.Shutdown(context.Background())
+	if *httpServe {
+		h.Shutdown(context.Background())
+	}
 
 	/*
 		for i := 0; i < 100; i++ {
@@ -194,14 +196,14 @@ func main() {
 
 		b, err := conn.VRead("BetriebsstundenBrenner1~0x0886")
 		if err != nil {
-			fmt.Println(err.Error())
+			log.Errorf(err.Error())
 		}
 		fmt.Printf("BetriebsstundenBrenner1~0x0886: %v\n", b)
 	*/
 	/*
 		n, err := conn.VRead("BedienteilBA_GWGA1~0x2323")
 		if err != nil {
-			fmt.Println(err.Error())
+			log.Errorf(err.Error())
 		}
 		fmt.Printf("BedienteilBA_GWGA1~0x2323: %v\n", n)
 
@@ -210,26 +212,26 @@ func main() {
 	/*
 		f, err := conn.VRead("Gemischte_AT~0x5527")
 		if err != nil {
-			fmt.Println(err.Error())
+			log.Errorf(err.Error())
 		}
 		fmt.Printf("Gemischte_AT~0x5527: %v\n", f)
 
 		f, err = conn.VRead("Solarkollektortemperatur~0x6564")
 		if err != nil {
-			fmt.Println(err.Error())
+			log.Errorf(err.Error())
 		}
 		fmt.Printf("Solarkollektortemperatur~0x6564: %v\n", f)
 
 		for i = 0; i < 0; i++ {
 			c, err := conn.VRead("ecnsysEventType~Error")
 			if err != nil {
-				fmt.Println(err.Error())
+				log.Errorf(err.Error())
 			}
 			fmt.Printf("ecnsysEventType~Error: %v\n", c)
 		}
 
 		// <-time.After(4 * time.Second)
-		// fmt.Println("Nö!")
+		// log.Errorf("Nö!")
 	*/
 	/*
 		id := [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f} // uuid.NewV4()

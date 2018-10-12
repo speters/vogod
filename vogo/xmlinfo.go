@@ -8,6 +8,8 @@ import (
 	"io"
 	"strconv"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // xDataPointType is a type to hold raw information from xml unmarshalling
@@ -179,7 +181,8 @@ func FindEventTypes(xmlReader io.Reader, etl *EventTypeList) int {
 				}
 				vet, err := validatexEventType(et)
 				if err != nil {
-					fmt.Println(err.Error())
+					log.Debugf(err.Error())
+					delete(*etl, et.ID)
 					break
 				}
 				(*etl)[et.ID] = &vet

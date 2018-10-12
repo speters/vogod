@@ -212,7 +212,7 @@ func prepareCmd(cmd *FsmCmd, state VitoState) (b []byte, err error) {
 }
 
 // VitoFsm handles the state machine for the KW and P300 protocols
-func (device *Device) vitoFsm() error { //, peer *io.ReadWriter, inChan <-chan byte, outChan chan<- byte) {
+func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-chan byte, outChan chan<- byte) {
 	var state, prevstate VitoState
 	state, prevstate = unknown, unknown
 	lastSyn, lastEnq := time.Now(), time.Now()
@@ -220,7 +220,8 @@ func (device *Device) vitoFsm() error { //, peer *io.ReadWriter, inChan <-chan b
 	e := make(chan error)
 
 	defer func() {
-		log.Warnf("Exiting vitoFSM")
+		log.Warnf("Exiting vitoFSM (err: %s)", err.Error())
+		close(e)
 		device.Done <- struct{}{}
 	}()
 
@@ -304,7 +305,6 @@ func (device *Device) vitoFsm() error { //, peer *io.ReadWriter, inChan <-chan b
 			n, err := device.Read(b[0:])
 			if err != nil {
 				e <- err
-				log.Errorf(err.Error())
 				close(c) // TODO: should we?
 				return
 			}
@@ -334,7 +334,6 @@ func (device *Device) vitoFsm() error { //, peer *io.ReadWriter, inChan <-chan b
 			if !ok {
 				return fmt.Errorf("Closed chan")
 			}
-			log.Error(err.Error())
 			return err
 		default:
 			// cont
@@ -445,7 +444,7 @@ func (device *Device) vitoFsm() error { //, peer *io.ReadWriter, inChan <-chan b
 		case recvKw:
 			b, err := waitforbytes(int(cmd.ResultLen))
 			if err != nil {
-				if err == io.EOF {
+				if err == io.EOF || len(b) == 0 {
 					return err
 				}
 
@@ -545,7 +544,7 @@ func (device *Device) vitoFsm() error { //, peer *io.ReadWriter, inChan <-chan b
 		case sendP300Ack:
 			b, err := waitforbytes(1)
 			if err != nil {
-				if err == io.EOF {
+				if err == io.EOF || len(b) == 0 {
 					return err
 				}
 
