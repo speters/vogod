@@ -185,3 +185,12 @@ func (o *Device) Connect(link string) error {
 
 	return nil
 }
+
+func (o *Device) Reconnect() error {
+	o.Close()
+	close(o.cmdChan)
+	close(o.resChan)
+	o.cmdChan = make(chan FsmCmd)
+	o.resChan = make(chan FsmResult)
+	return o.Connect(o.link)
+}

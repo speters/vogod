@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -12,6 +11,7 @@ import (
 	"runtime/pprof"
 	"strconv"
 	"syscall"
+	"time"
 
 	vogo "./vogo"
 	"github.com/gobuffalo/packr"
@@ -139,6 +139,7 @@ func main() {
 		log.Errorf(err.Error())
 		return
 	}
+	j := len(dpt.EventTypes)
 
 	xmlFile, err = os.Open(*etFile)
 	if err != nil {
@@ -153,15 +154,16 @@ func main() {
 		return
 	}
 
-	if i != len(dpt.EventTypes) {
-		log.Infof("Attn: %v EventType definitions found, but %v announced in DataPoint %v definition", i, len(dpt.EventTypes), dpt.ID)
+	if i != j {
+		log.Infof("Attn: %v EventType definitions found, but %v announced in DataPoint %v definition", i, j, dpt.ID)
 	} else {
 		log.Infof("All %v EventTypes found for DataPoint %v\n", i, dpt.ID)
 	}
 
 	var h *http.Server
+	var router *mux.Router
 	if *httpServe {
-		router := mux.NewRouter()
+		router = mux.NewRouter()
 		box := packr.NewBox("./static")
 		router.Handle("/", http.FileServer(box))
 		// router.Handle("/user", http.FileServer(http.Dir("./static/")))
@@ -170,14 +172,19 @@ func main() {
 		//	router.HandleFunc("/event/{id}", SetEvent).Methods("POST")
 
 		h = &http.Server{Addr: ":8000", Handler: router}
-		go func() { log.Fatal(h.ListenAndServe()) }()
-	}
-	<-conn.Done
+		go func() { log.Error(h.ListenAndServe()) }()
 
-	if *httpServe {
-		h.Shutdown(context.Background())
+		for {
+			<-conn.Done
+			<-time.After(5 * time.Second)
+			err := conn.Reconnect()
+			if err != nil {
+				log.Error(err)
+			} else {
+				log.Infof("Reconnected")
+			}
+		}
 	}
-
 	/*
 		for i := 0; i < 100; i++ {
 			result := conn.RawCmd(getSysDeviceIdent)

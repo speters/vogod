@@ -43,12 +43,19 @@ func (o *Device) RawCmd(cmd FsmCmd) FsmResult {
 // RawCmds takes a raw FsmCmd... and returns []FsmResult
 // It makes use of caching. Set Device.CacheDuration to 0 to disable
 // ATTN: Operates in chunks of chunkSize if cmd.ResultLen exceeds chunkSize
-func (o *Device) RawCmds(cmds ...FsmCmd) []FsmResult {
+func (o *Device) RawCmds(cmds ...FsmCmd) (ress []FsmResult) {
 	const chunkSize = 32 // Max is 37?
 
-	ress := []FsmResult{}
 	o.cmdLock.Lock()
 	defer o.cmdLock.Unlock()
+	defer func() {
+		// recover from panic caused by writing to a closed channel
+		if r := recover(); r != nil {
+			err := fmt.Errorf("%v", r)
+			ress = append(ress, FsmResult{Err: err})
+		}
+	}()
+
 	for n := 0; n < len(cmds); n++ {
 		cmd := cmds[n]
 		addr := bytes2Addr(cmd.Address)
@@ -66,6 +73,7 @@ func (o *Device) RawCmds(cmds ...FsmCmd) []FsmResult {
 		i := 0
 
 		var result FsmResult
+		var ok bool
 		var body []byte
 		for remainder := int(cmd.ResultLen); remainder > 0; remainder -= chunkSize {
 			if remainder > chunkSize {
@@ -80,7 +88,7 @@ func (o *Device) RawCmds(cmds ...FsmCmd) []FsmResult {
 				log.Errorf("Device not connected")
 				return []FsmResult{FsmResult{Err: io.EOF}}
 			}
-			result, ok := <-o.resChan
+			result, ok = <-o.resChan
 			if !ok {
 				return []FsmResult{FsmResult{Err: io.EOF}}
 			}
@@ -147,6 +155,7 @@ func (o *Device) VRead(ID string) (data interface{}, err error) {
 	for i := uint8(0); i < et.BlockLength; i += step {
 
 		cmd.Address = addr2Bytes(et.Address + uint16(i))
+
 		res = o.RawCmd(cmd)
 
 		b = append(b, res.Body...)
