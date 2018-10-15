@@ -100,6 +100,8 @@ var writeCmds = map[CommandType]bool{
 	physicalBeWrite:   true,
 }
 
+const maxFail int = 100
+
 func isReadCmd(c CommandType) bool {
 	if _, ok := readCmds[c]; ok {
 		return true
@@ -218,10 +220,10 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 	lastSyn, lastEnq := time.Now(), time.Now()
 	c := make(chan byte)
 	e := make(chan error)
+	var resCnt int
 
 	defer func() {
-		log.Warnf("Exiting vitoFSM (err: %s)", err.Error())
-		close(e)
+		log.Warnf("Exiting vitoFSM (err: %v)", err)
 		device.Done <- struct{}{}
 	}()
 
@@ -293,6 +295,9 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 	go func() {
 		b := make([]byte, 512)
 
+		defer close(e)
+		defer close(c) // TODO: should we?
+
 		for {
 			select {
 			case <-device.Done:
@@ -305,7 +310,6 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 			n, err := device.Read(b[0:])
 			if err != nil {
 				e <- err
-				close(c) // TODO: should we?
 				return
 			}
 			if n > 0 {
@@ -322,6 +326,10 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 			log.Debugf("Closing, returning from fsm")
 			return nil
 		default:
+		}
+
+		if prevstate == resetAck && state == reset {
+			resCnt++
 		}
 
 		if prevstate != state {
@@ -364,8 +372,13 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 				failCount = 0
 				state = idle // TODO: Check how to switch to P300 immediately
 			} else {
-				log.Warn(err.Error())
 				failCount++
+				if failCount > maxFail {
+					return fmt.Errorf("Too many fails: failCount=%d, resCnt=%d", failCount, resCnt)
+				} else {
+					<-time.After(3 * time.Second)
+					// allow Vitodens some time for recovering (observed Optolink deadlock when hammering)
+				}
 				state = reset
 			}
 		case resetP300:

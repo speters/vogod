@@ -2,3 +2,4 @@ debug
 vogod
 *.prof
 .*json
+Makefile
