@@ -36,6 +36,8 @@ var conn *vogo.Device
 func GetEventTypes(w http.ResponseWriter, r *http.Request) {
 	e := json.NewEncoder(w)
 	e.SetIndent("", "    ")
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
 	e.Encode(conn.DataPoint.EventTypes)
 }
 func GetEvent(w http.ResponseWriter, r *http.Request) {
@@ -53,10 +55,42 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
 	e := json.NewEncoder(w)
 	e.SetIndent("", "    ")
 	et.Value = b
 	e.Encode(et)
+}
+
+func SetEvent(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	et, ok := conn.DataPoint.EventTypes[params["id"]]
+	if !ok {
+		w.WriteHeader(404)
+		w.Write([]byte(fmt.Sprintf("No such EventType %v", params["id"])))
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	var val interface{}
+	err := decoder.Decode(&val)
+
+	if err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	et.Value = val
+	err = conn.VWrite(et.ID, val)
+	if err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("\"OK\""))
 }
 
 func main() {
@@ -169,7 +203,7 @@ func main() {
 		// router.Handle("/user", http.FileServer(http.Dir("./static/")))
 		router.HandleFunc("/eventtypes", GetEventTypes).Methods("GET")
 		router.HandleFunc("/event/{id}", GetEvent).Methods("GET")
-		//	router.HandleFunc("/event/{id}", SetEvent).Methods("POST")
+		router.HandleFunc("/event/{id}", SetEvent).Methods("POST")
 
 		h = &http.Server{Addr: ":8000", Handler: router}
 		go func() { log.Error(h.ListenAndServe()) }()
