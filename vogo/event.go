@@ -12,40 +12,40 @@ type DataPointType struct {
 
 // EventType holds low-level info for commands like address, data format and conversion hints
 type EventType struct {
-	ID          string
-	Address     uint16
-	Description string `json:",omitempty"`
+	ID          string `json:"id"`
+	Address     uint16 `json:"address"`
+	Description string `json:"description,omitempty"`
 
-	FCRead  CommandType
-	FCWrite CommandType
+	FCRead  CommandType `json:"fcread"`
+	FCWrite CommandType `json:"fcwrite"`
 
-	Parameter string
+	Parameter string `json:"parameter"`
 
-	PrefixRead   []byte `json:",omitempty"`
-	PrefixWrite  []byte `json:",omitempty"`
-	BlockLength  uint8  `json:",omitempty"`
-	BlockFactor  uint8  `json:",omitempty"`
-	MappingType  uint8  `json:",omitempty"`
-	BytePosition uint8  `json:",omitempty"`
-	ByteLength   uint8  `json:",omitempty"`
-	BitPosition  uint8  `json:",omitempty"`
-	BitLength    uint8  `json:",omitempty"`
+	PrefixRead   []byte `json:"prefixread,omitempty"`
+	PrefixWrite  []byte `json:"prefixwrite,omitempty"`
+	BlockLength  uint8  `json:"blocklength,omitempty"`
+	BlockFactor  uint8  `json:"blockfactor,omitempty"`
+	MappingType  uint8  `json:"mappingtype,omitempty"`
+	BytePosition uint8  `json:"byteposition,omitempty"`
+	ByteLength   uint8  `json:"bytelength,omitempty"`
+	BitPosition  uint8  `json:"bitposition,omitempty"`
+	BitLength    uint8  `json:"bitlength,omitempty"`
 
-	ALZ string `json:",omitempty"` // AuslieferZuStand
+	ALZ string `json:"alz,omitempty"` // AuslieferZuStand
 
-	Conversion string `json:",omitempty"`
+	Conversion string `json:"conversion,omitempty"`
 
-	ConversionFactor float32 `json:",omitempty"`
-	ConversionOffset float32 `json:",omitempty"`
-	LowerBorder      float32 `json:",omitempty"`
-	UpperBorder      float32 `json:",omitempty"`
+	ConversionFactor float32 `json:"conversionfactor,omitempty"`
+	ConversionOffset float32 `json:"conversionoffset,omitempty"`
+	LowerBorder      float32 `json:"lowerborder,omitempty"`
+	UpperBorder      float32 `json:"upperborder,omitempty"`
 
-	ValueList string `json:",omitempty"` // TODO: save as map[string]string or even map[uint32]string?
-	Unit      string `json:",omitempty"`
+	ValueList string `json:"valuelist,omitempty"` // TODO: save as map[string]string or even map[uint32]string?
+	Unit      string `json:"unit,omitempty"`
 
-	Codec Codec
+	Codec Codec `json:"codec"`
 
-	Value EventValueType `json:",omitempty"`
+	Value EventValueType `json:"value,omitempty"`
 }
 
 type EventValueType interface{}
