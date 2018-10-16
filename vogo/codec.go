@@ -320,7 +320,10 @@ func (dateTimeBCDCodec) Encode(et *EventType, b *[]byte, v interface{}) (err err
 	case time.Time:
 		t = v.(time.Time)
 	default:
-		return fmt.Errorf("Value must be a time.Time type")
+		t, err = time.Parse(time.RFC3339, v.(string))
+		if err != nil {
+			return fmt.Errorf("Time parse error: need time.Time type or a parseable string")
+		}
 	}
 
 	if t.IsZero() {
@@ -371,7 +374,10 @@ func (dateBCDCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error) 
 	case time.Time:
 		t = v.(time.Time)
 	default:
-		return fmt.Errorf("Value must be a time.Time type")
+		t, err = time.Parse(time.RFC3339, v.(string))
+		if err != nil {
+			return fmt.Errorf("Time parse error: need time.Time type or a parseable string")
+		}
 	}
 
 	if t.IsZero() {
