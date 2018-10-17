@@ -229,9 +229,9 @@ func main() {
 		router.HandleFunc("/event/{id}", getEvent).Methods("GET")
 		router.HandleFunc("/event/{id}", setEvent).Methods("POST")
 
-		//box := packr.NewBox("./static/")
+		//box := packr.NewBox("./web/")
 		// router.Handle("/b", http.FileServer(box))
-		fs := http.FileServer(http.Dir("./static"))
+		fs := http.FileServer(http.Dir("./web"))
 		router.PathPrefix("/").Handler(fs)
 		//router.PathPrefix("/assets").Handler(http.StripPrefix("/assets/", fs))
 
