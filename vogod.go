@@ -9,7 +9,6 @@ import (
 	"os/signal"
 	"runtime"
 	"runtime/pprof"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -26,6 +25,7 @@ var getSysDeviceIdent vogo.FsmCmd = vogo.FsmCmd{ID: [16]byte{0, 1, 2, 3, 4, 5, 6
 var dpFile = flag.String("d", "ecnDataPointType.xml", "filename of ecnDataPointType.xml like file")
 var etFile = flag.String("e", "ecnEventType.xml", "filename of ecnEventType.xml like file")
 var httpServe = flag.Bool("s", false, "start http server")
+var connTo = flag.String("c", "", "connection string, use socket://[host]:[port] for TCP or [serialDevice] for direct serial connection ")
 var verbose = flag.Bool("v", false, "verbose logging")
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
@@ -50,7 +50,7 @@ func GetDataPoint(w http.ResponseWriter, r *http.Request) {
 func VersionInfo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("\"OK\""))
+	w.Write([]byte("\"OK\"\n"))
 }
 func GetEvent(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
@@ -102,7 +102,7 @@ func SetEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("\"OK\""))
+	w.Write([]byte("\"OK\"\n"))
 }
 
 func main() {
@@ -115,6 +115,11 @@ func main() {
 		})
 	}
 
+	if *connTo == "" {
+		log.Fatal("Need connection string in -c option")
+		os.Exit(1)
+	}
+
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
 		if err != nil {
@@ -125,10 +130,6 @@ func main() {
 		}
 		defer pprof.StopCPUProfile()
 	}
-
-	addressHost := "orangepipc"
-	addressPort := 3002
-	address := addressHost + ":" + strconv.Itoa(addressPort)
 
 	done := make(chan os.Signal, 1)
 
@@ -159,7 +160,7 @@ func main() {
 	}()
 
 	conn = vogo.NewDevice()
-	conn.Connect("socket://" + address)
+	conn.Connect(*connTo)
 
 	conn.DataPoint = &vogo.DataPointType{}
 	dpt := conn.DataPoint
