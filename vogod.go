@@ -56,13 +56,13 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	et, ok := conn.DataPoint.EventTypes[params["id"]]
 	if !ok {
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(fmt.Sprintf("No such EventType %v", params["id"])))
 		return
 	}
 	b, err := conn.VRead(params["id"])
 	if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		return
 	}
@@ -79,7 +79,7 @@ func SetEvent(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	et, ok := conn.DataPoint.EventTypes[params["id"]]
 	if !ok {
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(fmt.Sprintf("No such EventType %v", params["id"])))
 		return
 	}
@@ -89,14 +89,14 @@ func SetEvent(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&val)
 
 	if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		return
 	}
 	et.Value = val
 	err = conn.VWrite(et.ID, val)
 	if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		return
 	}
