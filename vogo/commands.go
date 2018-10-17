@@ -9,10 +9,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (o *Device) getCache(addr uint16, len uint16) (b []byte, oldestCacheTime time.Time) {
+func (o *Device) getCache(addr AddressT, len uint16) (b []byte, oldestCacheTime time.Time) {
 	aok := true
 	var c []byte
-	for a := addr; a < (addr + len); a++ {
+	for a := uint16(addr); a < (uint16(addr) + len); a++ {
 		cacheMem, ok := (*o.Mem)[a]
 		if !ok {
 			aok = false
@@ -99,7 +99,7 @@ func (o *Device) RawCmds(cmds ...FsmCmd) (ress []FsmResult) {
 				}
 
 				for i := uint16(0); i < uint16(len(result.Body)); i++ {
-					(*o.Mem)[addr+i] = &MemType{result.Body[i], t}
+					(*o.Mem)[uint16(addr)+i] = &MemType{result.Body[i], t}
 				}
 			} else {
 				// Save an error for multi-block cmds
@@ -154,7 +154,7 @@ func (o *Device) VRead(ID string) (data interface{}, err error) {
 	b := []byte{}
 	for i := uint8(0); i < et.BlockLength; i += step {
 
-		cmd.Address = addr2Bytes(et.Address + uint16(i))
+		cmd.Address = addr2Bytes(et.Address + AddressT(i))
 
 		res = o.RawCmd(cmd)
 
@@ -197,7 +197,7 @@ func (o *Device) VWrite(ID string, data interface{}) (err error) {
 	b := []byte{}
 	for i := uint8(0); i < et.BlockLength; i += step {
 
-		cmd.Address = addr2Bytes(et.Address + uint16(i))
+		cmd.Address = addr2Bytes(et.Address + AddressT(i))
 		res = o.RawCmd(cmd)
 		b = append(b, res.Body...)
 
@@ -205,17 +205,14 @@ func (o *Device) VWrite(ID string, data interface{}) (err error) {
 			return res.Err
 		}
 	}
-
 	err = et.Codec.Encode(et, &b, data)
-	fmt.Printf("\nres.Body:\n%#v\n\n", b)
-
 	if err != nil {
 		return err
 	}
 
 	cmd.Command = et.FCWrite
 	for i := uint8(0); i < et.BlockLength; i += step {
-		cmd.Address = addr2Bytes(et.Address + uint16(i))
+		cmd.Address = addr2Bytes(et.Address + AddressT(i))
 		cmd.Args = b[i : i+step]
 		res = o.RawCmd(cmd)
 	}

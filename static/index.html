@@ -28,16 +28,16 @@
 <script type="text/javascript">
 function update_vals(){
      $.getJSON("./event/Solarkollektortemperatur~0x6564", function (json) {
-        var value = json.Value;
-        var percentvalue = Math.round((value/120)*100) + '%';
-        $('.progress-bar').css('height', percentvalue);
-        $('#tempSolar').html(value.toFixed(1)+json.Unit);
+        var value = json.value;
+        var percentValue = Math.round((value/120)*100) + '%';
+        $('.progress-bar').css('height', percentValue);
+        $('#tempSolar').html(value.toFixed(1)+json.unit);
     });
     $.getJSON("./event/TiefpassTemperaturwert_ATS~0x5525", function (json) {
-        $('#tempAussen').html(json.Value.toFixed(1)+json.Unit);
+        $('#tempAussen').html(json.value.toFixed(1)+json.unit);
     })
     $.getJSON("./event/BedienRTSolltemperaturA1M1~0x2306", function (json) {
-        $('#tempInnen').html(json.Value.toFixed(1)+json.Unit);
+        $('#tempInnen').html(json.value.toFixed(1)+json.unit);
     })
 };
 update_vals();

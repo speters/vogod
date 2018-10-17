@@ -40,6 +40,18 @@ func GetEventTypes(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	e.Encode(conn.DataPoint.EventTypes)
 }
+func GetDataPoint(w http.ResponseWriter, r *http.Request) {
+	e := json.NewEncoder(w)
+	e.SetIndent("", "    ")
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
+	e.Encode(conn.DataPoint)
+}
+func VersionInfo(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("\"OK\""))
+}
 func GetEvent(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	et, ok := conn.DataPoint.EventTypes[params["id"]]
@@ -202,6 +214,8 @@ func main() {
 		router.Handle("/", http.FileServer(box))
 		// router.Handle("/user", http.FileServer(http.Dir("./static/")))
 		router.HandleFunc("/eventtypes", GetEventTypes).Methods("GET")
+		router.HandleFunc("/datapoint", GetDataPoint).Methods("GET")
+		router.HandleFunc("/version", VersionInfo).Methods("GET")
 		router.HandleFunc("/event/{id}", GetEvent).Methods("GET")
 		router.HandleFunc("/event/{id}", SetEvent).Methods("POST")
 

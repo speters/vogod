@@ -203,7 +203,7 @@ func validatexEventType(xet xEventType) (EventType, error) {
 	if err != nil {
 		return et, fmt.Errorf("Can't parse address '%v' of EventType %v", xet.Address, et.ID)
 	}
-	et.Address = uint16(i)
+	et.Address = AddressT(i)
 
 	et.Description = xet.Description
 	et.FCRead = str2CmdType(xet.FCRead)

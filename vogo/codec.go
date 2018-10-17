@@ -238,6 +238,8 @@ func (divMulOffsetCodec) Encode(et *EventType, b *[]byte, v interface{}) (err er
 				} else if et.BitPosition == 4 {
 					(*b)[et.BytePosition] = ((*b)[et.BytePosition] & 0xf0) | d
 				}
+			} else {
+				(*b)[et.BytePosition] = byte(d)
 			}
 		}
 	case 2:
@@ -620,5 +622,5 @@ func toBCD(i int) byte {
 	return byte(((i) / 10 * 16) + ((i) % 10))
 }
 
-func bytes2Addr(a [2]byte) uint16 { return uint16(a[0])<<8 + uint16(a[1]) }
-func addr2Bytes(a uint16) [2]byte { return [2]byte{byte(a >> 8), byte(a & 0xff)} }
+func bytes2Addr(a [2]byte) AddressT { return AddressT(uint16(a[0])<<8 + uint16(a[1])) }
+func addr2Bytes(a AddressT) [2]byte { return [2]byte{byte(a >> 8), byte(a & 0xff)} }
