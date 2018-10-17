@@ -13,7 +13,6 @@ import (
 	"time"
 
 	vogo "./vogo"
-	"github.com/gobuffalo/packr"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
@@ -33,26 +32,26 @@ var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 var conn *vogo.Device
 
-func GetEventTypes(w http.ResponseWriter, r *http.Request) {
+func getEventTypes(w http.ResponseWriter, r *http.Request) {
 	e := json.NewEncoder(w)
 	e.SetIndent("", "    ")
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	e.Encode(conn.DataPoint.EventTypes)
 }
-func GetDataPoint(w http.ResponseWriter, r *http.Request) {
+func getDataPoint(w http.ResponseWriter, r *http.Request) {
 	e := json.NewEncoder(w)
 	e.SetIndent("", "    ")
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	e.Encode(conn.DataPoint)
 }
-func VersionInfo(w http.ResponseWriter, r *http.Request) {
+func versionInfo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("\"OK\"\n"))
 }
-func GetEvent(w http.ResponseWriter, r *http.Request) {
+func getEvent(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	et, ok := conn.DataPoint.EventTypes[params["id"]]
 	if !ok {
@@ -71,11 +70,13 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	e := json.NewEncoder(w)
 	e.SetIndent("", "    ")
-	et.Value = b
-	e.Encode(et)
+
+	rEt := *et
+	rEt.Value = b
+	e.Encode(rEt)
 }
 
-func SetEvent(w http.ResponseWriter, r *http.Request) {
+func setEvent(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	et, ok := conn.DataPoint.EventTypes[params["id"]]
 	if !ok {
@@ -211,14 +212,18 @@ func main() {
 	var router *mux.Router
 	if *httpServe {
 		router = mux.NewRouter()
-		box := packr.NewBox("./static")
-		router.Handle("/", http.FileServer(box))
-		// router.Handle("/user", http.FileServer(http.Dir("./static/")))
-		router.HandleFunc("/eventtypes", GetEventTypes).Methods("GET")
-		router.HandleFunc("/datapoint", GetDataPoint).Methods("GET")
-		router.HandleFunc("/version", VersionInfo).Methods("GET")
-		router.HandleFunc("/event/{id}", GetEvent).Methods("GET")
-		router.HandleFunc("/event/{id}", SetEvent).Methods("POST")
+
+		router.HandleFunc("/eventtypes", getEventTypes).Methods("GET")
+		router.HandleFunc("/datapoint", getDataPoint).Methods("GET")
+		router.HandleFunc("/version", versionInfo).Methods("GET")
+		router.HandleFunc("/event/{id}", getEvent).Methods("GET")
+		router.HandleFunc("/event/{id}", setEvent).Methods("POST")
+
+		//box := packr.NewBox("./static/")
+		// router.Handle("/b", http.FileServer(box))
+		fs := http.FileServer(http.Dir("./static"))
+		router.PathPrefix("/").Handler(fs)
+		//router.PathPrefix("/assets").Handler(http.StripPrefix("/assets/", fs))
 
 		h = &http.Server{Addr: ":8000", Handler: router}
 		go func() { log.Error(h.ListenAndServe()) }()
