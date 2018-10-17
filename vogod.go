@@ -36,6 +36,7 @@ func getEventTypes(w http.ResponseWriter, r *http.Request) {
 	e := json.NewEncoder(w)
 	e.SetIndent("", "    ")
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s.json\"", conn.DataPoint.ID))
 	w.WriteHeader(http.StatusOK)
 	e.Encode(conn.DataPoint.EventTypes)
 }
