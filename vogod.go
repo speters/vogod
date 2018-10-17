@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	vogo "./vogo"
+	"./vogo"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
