@@ -28,10 +28,10 @@ type EventType struct {
 	FCRead  CommandType `json:"fcread"`
 	FCWrite CommandType `json:"fcwrite"`
 
-	Parameter string `json:"parameter"`
+	Parameter string `json:"-"` // `json:"parameter"`
 
-	PrefixRead   []byte `json:"prefix_read,omitempty"`
-	PrefixWrite  []byte `json:"prefix_write,omitempty"`
+	PrefixRead   []byte `json:"-"` // `json:"prefix_read,omitempty"`
+	PrefixWrite  []byte `json:"-"` // `json:"prefix_write,omitempty"`
 	BlockLength  uint8  `json:"block_length,omitempty"`
 	BlockFactor  uint8  `json:"block_factor,omitempty"`
 	MappingType  uint8  `json:"mapping_type,omitempty"`
@@ -40,9 +40,9 @@ type EventType struct {
 	BitPosition  uint8  `json:"bit_position,omitempty"`
 	BitLength    uint8  `json:"bit_length,omitempty"`
 
-	ALZ string `json:"alz,omitempty"` // AuslieferZuStand
+	ALZ string `json:"-"` //`json:"alz,omitempty"` // AuslieferZuStand
 
-	Conversion string `json:"conversion,omitempty"`
+	Conversion string `json:"-"` // `json:"conversion,omitempty"`
 
 	ConversionFactor float32 `json:"conversion_factor,omitempty"`
 	ConversionOffset float32 `json:"conversion_offset,omitempty"`
