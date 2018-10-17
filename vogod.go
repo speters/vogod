@@ -32,6 +32,10 @@ var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 var conn *vogo.Device
 
+// To be set via go build -ldflags "-X main.buildVersion=$(date -u +%FT%TZ) -X main.buildDate=$(git describe --dirty)"
+var buildVersion string = "unspecified"
+var buildDate string = "unknown"
+
 func getEventTypes(w http.ResponseWriter, r *http.Request) {
 	e := json.NewEncoder(w)
 	e.SetIndent("", "    ")
@@ -50,7 +54,12 @@ func getDataPoint(w http.ResponseWriter, r *http.Request) {
 func versionInfo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("\"OK\"\n"))
+	v := struct {
+		Version    string `json:"version"`
+		Build_date string `json:"build_date"`
+	}{Version: buildVersion, Build_date: buildDate}
+	j, _ := json.Marshal(v)
+	w.Write([]byte(j))
 }
 func getEvent(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
