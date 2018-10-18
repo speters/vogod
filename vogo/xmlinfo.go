@@ -148,13 +148,11 @@ func FindDataPointType(xmlReader io.Reader, sysDeviceIdent [8]byte, dpt *DataPoi
 		etl := dpt.EventTypes
 
 		for _, et := range strings.Split(dp.EventtTypeList, ";") {
+			et = strings.Split(et, "~")[0]
 			etl[et] = &EventType{ID: et}
 		}
 
-		etl["NRF_Aussentemperatur_Regelung~0x0952"] = &EventType{ID: "NRF_Aussentemperatur_Regelung~0x0952"}
-
 		r.EventTypes = etl
-
 		return nil
 	}
 	return ErrNotFound
@@ -175,6 +173,8 @@ func FindEventTypes(xmlReader io.Reader, etl *EventTypeList) int {
 			if se.Name.Local == "EventType" {
 				var et xEventType
 				decoder.DecodeElement(&et, &se)
+
+				et.ID = strings.Split(et.ID, "~")[0]
 
 				if _, ok := (*etl)[et.ID]; !ok {
 					break

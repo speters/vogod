@@ -25,141 +25,205 @@
 
 </style>
 <script type="text/javascript">
+var innenTemp = 21.0
 function update_vals(){
-     $.getJSON("/event/Solarkollektortemperatur~0x6564", function (json) {
+     $.getJSON("/event/Solarkollektortemperatur", function (json) {
         var value = json.value;
         var percentValue = Math.round((value/120)*100) + '%';
         $('.progress-bar').css('height', percentValue);
         $('#tempSolar').html(value.toFixed(1)+json.unit);
     });
-    $.getJSON("/event/TiefpassTemperaturwert_ATS~0x5525", function (json) {
+    $.getJSON("/event/TiefpassTemperaturwert_ATS", function (json) {
         $('#tempAussen').html(json.value.toFixed(1)+json.unit);
     })
-    $.getJSON("/event/BedienRTSolltemperaturA1M1~0x2306", function (json) {
-        $('#tempInnen').html(json.value.toFixed(1)+json.unit);
+    $.getJSON("/event/BedienRTSolltemperaturA1M1", function (json) {
+        innenTemp = json.value.toFixed(1);
+        $('#tempInnen').html(innenTemp + json.unit);
     })
 };
 update_vals();
 
 var interval = setInterval(update_vals, 10000);
+
 </script>
 </head>
 <body>
     <div id="homePic" style="max-width: 600px">
-        <svg
-           xmlns:dc="http://purl.org/dc/elements/1.1/"
-           xmlns:cc="http://creativecommons.org/ns#"
-           xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-           xmlns:svg="http://www.w3.org/2000/svg"
-           xmlns="http://www.w3.org/2000/svg"
-           xmlns:xlink="http://www.w3.org/1999/xlink"
-           version="1.1"
-           id="svg2"
-           viewBox="0 0 453.54331 453.54331"
-           _height="128mm"
-           _width="128mm">
-          <defs
-             id="defs4">
-            <linearGradient
-               id="linearGradient4180">
-              <stop
-                 id="stop4182"
-                 offset="0"
-                 style="stop-color:#cccccc;stop-opacity:1;" />
-              <stop
-                 id="stop4184"
-                 offset="1"
-                 style="stop-color:#737373;stop-opacity:0.99607843" />
-            </linearGradient>
-            <linearGradient
-               id="linearGradient4170">
-              <stop
-                 id="stop4172"
-                 offset="0"
-                 style="stop-color:#eaeaea;stop-opacity:1" />
-              <stop
-                 id="stop4174"
-                 offset="1"
-                 style="stop-color:#cccccc;stop-opacity:1" />
-            </linearGradient>
-            <linearGradient
-               gradientTransform="translate(-66.002884,22.220355)"
-               gradientUnits="userSpaceOnUse"
-               y2="165.44827"
-               x2="484.87323"
-               y1="159.38734"
-               x1="388.90872"
-               id="linearGradient4176"
-               xlink:href="#linearGradient4170" />
-            <linearGradient
-               gradientTransform="translate(8.5714286,-1.4285714)"
-               gradientUnits="userSpaceOnUse"
-               y2="275.21936"
-               x2="163.92857"
-               y1="398.07648"
-               x1="138.57143"
-               id="linearGradient4186"
-               xlink:href="#linearGradient4180" />
-          </defs>
-          <metadata
-             id="metadata7">
-            <rdf:RDF>
-              <cc:Work
-                 rdf:about="">
-                <dc:format>image/svg+xml</dc:format>
-                <dc:type
-                   rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-                <dc:title></dc:title>
-              </cc:Work>
-            </rdf:RDF>
-          </metadata>
-          <g
-             transform="translate(0,-598.8189)"
-             id="layer1">
-            <g
-               transform="translate(-19,516)"
-               id="house">
-              <path
-                 id="house_side"
-                 d="m 141.55528,276.85636 39.08395,-19.93983 0.85928,152.28459 -40.21312,24.65515 z"
-                 style="fill:url(#linearGradient4186);fill-opacity:1" />
-              <path
-                 id="house_roof"
-                 d="m 141.56131,276.86106 36.58259,-26.37978 180.62602,-93.82952 73.76598,33.41952 -18.51445,0.39556 -54.88365,-24.57142 z"
-                 style="fill:url(#linearGradient4176);fill-opacity:1" />
-            </g>
-            <text
-               id="tempInnenT"
-               y="852.80359"
-               x="192.44043"
-               style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-               xml:space="preserve"><tspan
-                 style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:60px;font-family:'Roboto Mono Medium for Powerline';-inkscape-font-specification:'Roboto Mono Medium for Powerline Medium';text-align:start;text-anchor:start"
-                 y="852.80359"
-                 x="192.44043"
-                 id="tempInnen">__°C</tspan></text>
-            <text
-               xml:space="preserve"
-               style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;text-align:end;letter-spacing:0px;word-spacing:0px;text-anchor:end;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-               x="240.21973"
-               y="707.36218"
-               id="tempSolarT"><tspan
-                 id="tempSolar"
-                 x="240.21973"
-                 y="707.36218"
-                 style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:30px;font-family:'Roboto Mono Medium for Powerline';-inkscape-font-specification:'Roboto Mono Medium for Powerline Medium';text-align:end;text-anchor:end">__°C</tspan></text>
-            <text
-               id="tempAussenT"
-               y="840.36218"
-               x="119.07471"
-               style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;text-align:end;letter-spacing:0px;word-spacing:0px;text-anchor:end;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-               xml:space="preserve"><tspan
-                 style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:30px;font-family:'Roboto Mono Medium for Powerline';-inkscape-font-specification:'Roboto Mono Medium for Powerline Medium';text-align:end;text-anchor:end"
-                 y="840.36218"
-                 x="119.07471"
-                 id="tempAussen">__°C</tspan></text>
-          </g>
-        </svg>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   version="1.1"
+   id="svg2"
+   viewBox="0 0 453.54331 453.54331"
+   height="128mm"
+   width="128mm">
+  <defs
+     id="defs4">
+    <linearGradient
+       id="linearGradient4180">
+      <stop
+         id="stop4182"
+         offset="0"
+         style="stop-color:#cccccc;stop-opacity:1;" />
+      <stop
+         id="stop4184"
+         offset="1"
+         style="stop-color:#737373;stop-opacity:0.99607843" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient4170">
+      <stop
+         id="stop4172"
+         offset="0"
+         style="stop-color:#eaeaea;stop-opacity:1" />
+      <stop
+         id="stop4174"
+         offset="1"
+         style="stop-color:#cccccc;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient
+       gradientTransform="translate(-66.002884,22.220355)"
+       gradientUnits="userSpaceOnUse"
+       y2="165.44827"
+       x2="484.87323"
+       y1="159.38734"
+       x1="388.90872"
+       id="linearGradient4176"
+       xlink:href="#linearGradient4170" />
+    <linearGradient
+       gradientTransform="translate(8.5714286,-1.4285714)"
+       gradientUnits="userSpaceOnUse"
+       y2="275.21936"
+       x2="163.92857"
+       y1="398.07648"
+       x1="138.57143"
+       id="linearGradient4186"
+       xlink:href="#linearGradient4180" />
+  </defs>
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     transform="translate(0,-598.8189)"
+     id="layer1">
+    <g
+       transform="translate(-19,516)"
+       id="house">
+      <path
+         id="house_side"
+         d="m 141.55528,276.85636 39.08395,-19.93983 0.85928,152.28459 -40.21312,24.65515 z"
+         style="fill:url(#linearGradient4186);fill-opacity:1" />
+      <path
+         id="house_roof"
+         d="m 141.56131,276.86106 36.58259,-26.37978 180.62602,-93.82952 73.76598,33.41952 -18.51445,0.39556 -54.88365,-24.57142 z"
+         style="fill:url(#linearGradient4176);fill-opacity:1" />
+    </g>
+    <text
+       id="tempInnenT"
+       y="852.80359"
+       x="192.44043"
+       style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       xml:space="preserve"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:60px;font-family:'Roboto Mono Medium for Powerline';-inkscape-font-specification:'Roboto Mono Medium for Powerline Medium';text-align:start;text-anchor:start"
+         y="852.80359"
+         x="192.44043"
+         id="tempInnen">__°C</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;text-align:end;letter-spacing:0px;word-spacing:0px;text-anchor:end;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="240.21973"
+       y="707.36218"
+       id="tempSolarT"><tspan
+         id="tempSolar"
+         x="240.21973"
+         y="707.36218"
+         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:30px;font-family:'Roboto Mono Medium for Powerline';-inkscape-font-specification:'Roboto Mono Medium for Powerline Medium';text-align:end;text-anchor:end">__°C</tspan></text>
+    <text
+       id="tempAussenT"
+       y="840.36218"
+       x="119.07471"
+       style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;text-align:end;letter-spacing:0px;word-spacing:0px;text-anchor:end;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       xml:space="preserve"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:30px;font-family:'Roboto Mono Medium for Powerline';-inkscape-font-specification:'Roboto Mono Medium for Powerline Medium';text-align:end;text-anchor:end"
+         y="840.36218"
+         x="119.07471"
+         id="tempAussen">__°C</tspan></text>
+    <g
+       id="plusButtonT">
+      <rect
+         style="opacity:1;fill:#eaeaea;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         id="plusButtonS"
+         width="37"
+         height="33"
+         x="364.80078"
+         y="767.32312"
+         rx="0.35433072"
+         ry="0.35433072" />
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         x="366.54297"
+         y="796.36218"
+         id="plusButtonS"><tspan
+           id="plusButton"
+           x="366.54297"
+           y="796.36218"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';fill:#ff0000">+</tspan></text>
+    </g>
+    <g
+       id="minusButtonT">
+      <rect
+         ry="0.35433072"
+         rx="0.35433072"
+         y="864.34851"
+         x="364.80078"
+         height="33"
+         width="37"
+         id="minusButtonS"
+         style="opacity:1;fill:#eaeaea;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+      <text
+         id="text4602"
+         y="1103.7681"
+         x="299.61948"
+         style="font-style:normal;font-weight:normal;font-size:49.47623825px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         xml:space="preserve"
+         transform="scale(1.2369059,0.80846891)"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';fill:#000080"
+           y="1103.7681"
+           x="299.61948"
+           id="minusButton">-</tspan></text>
+    </g>
+  </g>
+</svg>
+<script type="text/javascript">
+$( "#plusButton" ).on("click", function() {
+    innenTemp = parseFloat(innenTemp) + 1;
+    $('#tempInnen').html(innenTemp.toFixed(1) + "°C");
+    $.post( "/event/BedienRTSolltemperaturA1M1", ""+innenTemp);
+    update_vals();
+});
+
+$( "#minusButton" ).on("click", function() {
+    innenTemp = parseFloat(innenTemp) - 1;
+    $('#tempInnen').html(innenTemp.toFixed(1) + "°C");
+    $.post( "/event/BedienRTSolltemperaturA1M1", ""+innenTemp);
+    update_vals();
+});
+</script>
+
     </div>
     <div>
         <ul>
