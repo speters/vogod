@@ -35,11 +35,23 @@ function update_vals(){
     });
     $.getJSON("/event/TiefpassTemperaturwert_ATS", function (json) {
         $('#tempAussen').html(json.value.toFixed(1)+json.unit);
-    })
+    });
     $.getJSON("/event/BedienRTSolltemperaturA1M1", function (json) {
         innenTemp = json.value.toFixed(1);
         $('#tempInnen').html(innenTemp + json.unit);
-    })
+    });
+    $.getJSON("/event/nvoPWRState_CFDM_state", function (json) {
+        pwr = json.value;
+        if (pwr == 1) {
+            $('#tempInnen').css('fill', '#ff0000');
+        } else {
+            $('#tempInnen').css('fill', '#000000');
+        }
+    });
+    $.getJSON("/event/nvoPWRState_CFDM_value", function (json) {
+        power_val = json.value.toFixed(1);
+        $('#power').html(power_val + json.unit);
+    });
 };
 update_vals();
 
@@ -223,13 +235,17 @@ $( "#minusButton" ).on("click", function() {
     update_vals();
 });
 </script>
-
+    </div>
+    <div>
+        <span id="power">&nbsp;</span>
     </div>
     <div>
         <ul>
             <li><a href="/version">Version info</a></li>
             <li><a href="/datapoint">DataPoint info</a></li>
             <li><a href="/eventtypes">EventTypes list</a></li>
+            <li><code>/event/{id}</code> GET returns EventType with value</a></li>
+            <li><code>/event/{id}</code> POST with value to be set in the payload</a></li>
         </ul>
     </div>
 </body>
