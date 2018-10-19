@@ -72,7 +72,9 @@ func getEvent(w http.ResponseWriter, r *http.Request) {
 	b, err := conn.VRead(params["id"])
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
 		w.Write([]byte(err.Error()))
+		w.Write([]byte(fmt.Sprintf("\n\n%#v", et)))
 		return
 	}
 
@@ -101,14 +103,18 @@ func setEvent(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
 		w.Write([]byte(err.Error()))
+		w.Write([]byte(fmt.Sprintf("\n\n%#v", et)))
 		return
 	}
 	et.Value = val
 	err = conn.VWrite(et.ID, val)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
 		w.Write([]byte(err.Error()))
+		w.Write([]byte(fmt.Sprintf("\n\n%#v", et)))
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
