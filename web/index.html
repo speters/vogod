@@ -3,7 +3,7 @@
 <script src="assets/js/jquery-latest.js" orig_src="https://code.jquery.com/jquery-latest.js"></script>
 <link rel="stylesheet" href="assets/css/bootstrap.min.css" orig_href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
 <script src="assets/js/bootstrap.min.js" orig_src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.4.1/css/all.css" integrity="sha384-5sAR7xN1Nv6T6+dT2mhtzEpVJvfS3NScPQTrOxhwjIuvcA67KV2R5Jz6kr4abQsz" crossorigin="anonymous">
+<link rel="stylesheet" href="assets/css/vpictos.css">
 <script type="text/javascript">
 var innenTemp = 21.0
 function update_vals(){
@@ -49,7 +49,7 @@ var interval = setInterval(update_vals, 10000);
 </script>
 </head>
 <body>
-    <div id="homePic" style="max-width: 600px">
+    <div id="homePic" style="max-width: 600px;  outline: 2px dotted green;">
 <svg
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:cc="http://creativecommons.org/ns#"
@@ -60,8 +60,8 @@ var interval = setInterval(update_vals, 10000);
    version="1.1"
    id="svg2"
    viewBox="0 0 453.54331 453.54331"
-   height="128mm"
-   width="128mm">
+   x-height="128mm"
+   x-width="128mm">
   <defs
      id="defs4">
     <linearGradient
@@ -213,13 +213,13 @@ var interval = setInterval(update_vals, 10000);
     <div id="BedienteilBA_GWGA1" class="btn-group" data-toggle="buttons">
     	<label class="btn btn-default active">
     		<input type="radio" autocomplete="off" value="0">
-<span class="fas fa-power-off"></span> Abschalt
+<span class="vp vp-power-off"></span> Abschalt
     	</label>
     	<label class="btn btn-default">
-    		<input type="radio" autocomplete="off" value="1"><span class="fas fa-bath"></span> Nur WW
+    		<input type="radio" autocomplete="off" value="1"><span class="vp vp-tap"></span> Nur WW
     	</label>
     	<label class="btn btn-default">
-    		<input type="radio" autocomplete="off" value="2"><span class="fas fa-fire"></span><span class="fas fa-bath"></span> Heizen und WW
+    		<input type="radio" autocomplete="off" value="2"><span class="vp vp-radiator"></span><span class="vp vp-tap"></span> Heizen und WW
     	</label>
     </div>
 

@@ -1,0 +1,76 @@
+@font-face {
+  font-family: 'VPictos';
+  src: url('../fonts/viess_pictos.eot?v=0.1');
+  src: url('../fonts/viess_pictos.eot?iefix&v=0.1') format('embedded-opentype'),
+    url('../fonts/viess_pictos.woff?v=0.1') format('woff'),
+    url('../fonts/viess_pictos.ttf?v=0.1') format('truetype'),
+    url('../fonts/viess_pictos.svg?v=0.1#VPictosnormal') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.vp {
+ display:inline-block;
+ font:normal normal normal 14px/1 VPictos;
+ font-size:inherit;
+ text-rendering:auto;
+ -webkit-font-smoothing:antialiased;
+ -moz-osx-font-smoothing:grayscale
+}
+
+.vp-chimney-sweeper:before {content: "\2f";}
+.vp-a-lg:before {content: "\41";}
+.vp-cesign:before {content: "\43";}
+.vp-d-lg:before {content: "\44";}
+.vp-e-lg:before {content: "\45";}
+.vp-i-lg:before {content: "\49";}
+.vp-m-lg:before {content: "\4d";}
+.vp-n-lg:before {content: "\4e";}
+.vp-o-lg:before {content: "\4f";}
+.vp-s-lg:before {content: "\53";}
+.vp-btn-heatingtimer:before {content: "\61";}
+.vp-btn-watertimer:before {content: "\62";}
+.vp-btn-calendar:before {content: "\63";}
+.vp-btn-temp-night:before {content: "\64";}
+.vp-btn-temp-water:before {content: "\65";}
+.vp-btn-radiator-tap:before {content: "\66";}
+.vp-btn-luggage:before {content: "\67";}
+.vp-btn-power-off:before {content: "\68";}
+.vp-circle-i:before {content: "\69";}
+.vp-btn-party:before {content: "\6a";}
+.vp-btn-piggybank:before {content: "\6b";}
+.vp-btn-tap:before {content: "\6c";}
+.vp-circle-ok:before {content: "\6e";}
+.vp-circle-reset:before {content: "\6f";}
+.vp-t-lg:before {content: "\54";}
+.vp-v-lg:before {content: "\56";}
+.vp-w-lg:before {content: "\57";}
+.vp-reset:before {content: "\70";}
+.vp-circle-power-off:before {content: "\71";}
+.vp-tap:before {content: "\72";}
+.vp-solarpanel:before {content: "\73";}
+.vp-time:before {content: "\74";}
+.vp-leave:before {content: "\75";}
+.vp-triangle-up:before {content: "\3c";}
+.vp-triangle-down:before {content: "\3e";}
+.vp-pump:before {content: "\5e";}
+.vp-error:before {content: "\5c";}
+.vp-circle-plus:before {content: "\2b";}
+.vp-circle-minus:before {content: "\2d";}
+.vp-moon_z:before {content: "\29";}
+.vp-sun:before {content: "\2a";}
+.vp-radiator:before {content: "\23";}
+.vp-triangle-sm:before {content: "\27";}
+.vp-thermometer:before {content: "\21";}
+.vp-watertemp:before {content: "\77";}
+.vp-freeze:before {content: "\28";}
+.vp-btn-radiotower:before {content: "\24";}
+.vp-flame_r:before {content: "\26";}
+.vp-two:before {content: "\32";}
+.vp-zero:before {content: "\30";}
+.vp-germandbls:before {content: "\df";}
+.vp-underscore:before {content: "\5f";}
+.vp-piggybank:before {content: "\2e";}
+.vp-party:before {content: "\2c";}
+.vp-luggage:before {content: "\2212";}
+.vp-power-off:before {content: "\25";}
