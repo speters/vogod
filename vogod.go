@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,21 +10,23 @@ import (
 	"os/signal"
 	"runtime"
 	"runtime/pprof"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
 	"./vogo"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+
+	// set back to upstream "github.com/tiborvass/uniline"
+	// when pull request 7 (fix #6: panic: Split called after Scan) is merged:
+	"github.com/speters/uniline"
 )
 
-var getSysDeviceIdent vogo.FsmCmd = vogo.FsmCmd{ID: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}, Command: 0x01, Address: [2]byte{0x00, 0xf8}, Args: nil, ResultLen: 8}
-
-// const testDeviceIdent = [8]byte{0x20, 0x92, 0x01, 0x07, 0x00, 0x00, 0x01, 0x5a}
-
-var dpFile = flag.String("d", "ecnDataPointType.xml", "filename of ecnDataPointType.xml like file")
-var etFile = flag.String("e", "ecnEventType.xml", "filename of ecnEventType.xml like file")
-var httpServe = flag.Bool("s", false, "start http server")
+var dpFile = flag.String("d", "ecnDataPointType.xml", "filename of ecnDataPointType.xml like `file`")
+var etFile = flag.String("e", "ecnEventType.xml", "filename of ecnEventType.xml like `file`")
+var httpServe = flag.String("s", "", "start http server at [bindtohost][:]port")
 var connTo = flag.String("c", "", "connection string, use socket://[host]:[port] for TCP or [serialDevice] for direct serial connection ")
 var verbose = flag.Bool("v", false, "verbose logging")
 
@@ -35,6 +38,10 @@ var conn *vogo.Device
 // To be set via go build -ldflags "-X main.buildVersion=$(date -u +%FT%TZ) -X main.buildDate=$(git describe --dirty)"
 var buildVersion string = "unspecified"
 var buildDate string = "unknown"
+
+var getSysDeviceIdent vogo.FsmCmd = vogo.FsmCmd{ID: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}, Command: 0x01, Address: [2]byte{0x00, 0xf8}, Args: nil, ResultLen: 8}
+
+// const testDeviceIdent = [8]byte{0x20, 0x92, 0x01, 0x07, 0x00, 0x00, 0x01, 0x5a}
 
 func getEventTypes(w http.ResponseWriter, r *http.Request) {
 	e := json.NewEncoder(w)
@@ -120,6 +127,23 @@ func setEvent(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("\"OK\"\n"))
+}
+
+func cliget(id string) (string, error) {
+	et, ok := conn.DataPoint.EventTypes[id]
+	if !ok {
+		return "", fmt.Errorf("No such EventType %v", id)
+	}
+	b, err := conn.VRead(id)
+	if err != nil {
+		return "", err
+	}
+
+	rEt := *et
+	rEt.Value = b
+
+	bs, err := json.MarshalIndent(rEt, "", "    ")
+	return string(bs), err
 }
 
 func main() {
@@ -226,7 +250,7 @@ func main() {
 
 	var h *http.Server
 	var router *mux.Router
-	if *httpServe {
+	if *httpServe != "" {
 		router = mux.NewRouter()
 
 		router.HandleFunc("/eventtypes", getEventTypes).Methods("GET")
@@ -241,12 +265,16 @@ func main() {
 		router.PathPrefix("/").Handler(fs)
 		//router.PathPrefix("/assets").Handler(http.StripPrefix("/assets/", fs))
 
-		h = &http.Server{Addr: ":8000", Handler: router}
+		if i, err := strconv.Atoi(*httpServe); err == nil {
+			*httpServe = fmt.Sprintf(":%d", i)
+		}
+
+		h = &http.Server{Addr: *httpServe, Handler: router}
 		go func() { log.Error(h.ListenAndServe()) }()
 
 		for {
 			<-conn.Done
-			<-time.After(5 * time.Second)
+			<-time.After(12 * time.Second)
 			err := conn.Reconnect()
 			if err != nil {
 				log.Error(err)
@@ -255,6 +283,71 @@ func main() {
 			}
 		}
 	}
+
+	prompt := "> "
+	scanner := uniline.DefaultScanner()
+	for scanner.Scan(prompt) {
+		line := scanner.Text()
+		words := []string{}
+		if len(line) > 0 {
+			scanner2 := bufio.NewScanner(strings.NewReader(line))
+			scanner2.Split(bufio.ScanWords)
+			for scanner2.Scan() {
+				words = append(words, scanner2.Text())
+			}
+			if err := scanner2.Err(); err != nil {
+				log.WithError(err)
+				continue
+			}
+
+			if len(words) == 1 {
+				if words[0] == "eventtypes" {
+					s, err := json.MarshalIndent(conn.DataPoint.EventTypes, "", "    ")
+					if err != nil {
+						log.Error(err)
+					}
+					fmt.Print(string(s))
+					fmt.Printf("\x1e\n")
+				} else if words[0] == "datapointtype" {
+					s, err := json.MarshalIndent(conn.DataPoint, "", "    ")
+					if err != nil {
+						log.Error(err)
+					}
+					fmt.Print(string(s))
+					fmt.Printf("\x1e\n")
+				} else {
+					log.Errorf("No such command '%s'", words[0])
+				}
+			} else if len(words) == 2 {
+				if words[0] == "get" {
+					s, err := cliget(words[1])
+					if err != nil {
+						log.Error(err)
+						continue
+					}
+					fmt.Print(s)
+					fmt.Printf("\x1e\n")
+				} else {
+					log.Errorf("No such command '%s'", words[0])
+				}
+			} else if len(words) > 2 {
+				if words[0] == "set" {
+					fmt.Println("set to be implemented")
+					fmt.Printf("\x1e\n")
+				} else {
+					log.Errorf("No such command '%s'", words[0])
+				}
+			} else {
+				// should not reach
+				continue
+			}
+			scanner.AddToHistory(line)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		panic(err)
+	}
+
 	/*
 		for i := 0; i < 100; i++ {
 			result := conn.RawCmd(getSysDeviceIdent)
