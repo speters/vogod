@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -11,17 +10,12 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
 	"./vogo"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
-
-	// set back to upstream "github.com/tiborvass/uniline"
-	// when pull request 7 (fix #6: panic: Split called after Scan) is merged:
-	"github.com/speters/uniline"
 )
 
 var dpFile = flag.String("d", "ecnDataPointType.xml", "filename of ecnDataPointType.xml like `file`")
@@ -283,131 +277,4 @@ func main() {
 			}
 		}
 	}
-
-	prompt := "> "
-	scanner := uniline.DefaultScanner()
-	for scanner.Scan(prompt) {
-		line := scanner.Text()
-		words := []string{}
-		if len(line) > 0 {
-			scanner2 := bufio.NewScanner(strings.NewReader(line))
-			scanner2.Split(bufio.ScanWords)
-			for scanner2.Scan() {
-				words = append(words, scanner2.Text())
-			}
-			if err := scanner2.Err(); err != nil {
-				log.WithError(err)
-				continue
-			}
-
-			if len(words) == 1 {
-				if words[0] == "eventtypes" {
-					s, err := json.MarshalIndent(conn.DataPoint.EventTypes, "", "    ")
-					if err != nil {
-						log.Error(err)
-					}
-					fmt.Print(string(s))
-					fmt.Printf("\x1e\n")
-				} else if words[0] == "datapointtype" {
-					s, err := json.MarshalIndent(conn.DataPoint, "", "    ")
-					if err != nil {
-						log.Error(err)
-					}
-					fmt.Print(string(s))
-					fmt.Printf("\x1e\n")
-				} else {
-					log.Errorf("No such command '%s'", words[0])
-				}
-			} else if len(words) == 2 {
-				if words[0] == "get" {
-					s, err := cliget(words[1])
-					if err != nil {
-						log.Error(err)
-						continue
-					}
-					fmt.Print(s)
-					fmt.Printf("\x1e\n")
-				} else {
-					log.Errorf("No such command '%s'", words[0])
-				}
-			} else if len(words) > 2 {
-				if words[0] == "set" {
-					fmt.Println("set to be implemented")
-					fmt.Printf("\x1e\n")
-				} else {
-					log.Errorf("No such command '%s'", words[0])
-				}
-			} else {
-				// should not reach
-				continue
-			}
-			scanner.AddToHistory(line)
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		panic(err)
-	}
-
-	/*
-		for i := 0; i < 100; i++ {
-			result := conn.RawCmd(getSysDeviceIdent)
-			if result.Err != nil {
-				return
-			}
-		}
-
-		if true {
-			b, _ := conn.VRead("Uhrzeit~0x088E")
-			fmt.Printf("\nTIME: %v\n", b)
-			conn.VWrite("Uhrzeit~0x088E", time.Now())
-			b, _ = conn.VRead("Uhrzeit~0x088E")
-			fmt.Printf("\nTIME: %v\n", b)
-		}
-
-		b, err := conn.VRead("BetriebsstundenBrenner1~0x0886")
-		if err != nil {
-			log.Errorf(err.Error())
-		}
-		fmt.Printf("BetriebsstundenBrenner1~0x0886: %v\n", b)
-	*/
-	/*
-		n, err := conn.VRead("BedienteilBA_GWGA1~0x2323")
-		if err != nil {
-			log.Errorf(err.Error())
-		}
-		fmt.Printf("BedienteilBA_GWGA1~0x2323: %v\n", n)
-
-		conn.VWrite("BedienteilBA_GWGA1~0x2323", 2)
-	*/
-	/*
-		f, err := conn.VRead("Gemischte_AT~0x5527")
-		if err != nil {
-			log.Errorf(err.Error())
-		}
-		fmt.Printf("Gemischte_AT~0x5527: %v\n", f)
-
-		f, err = conn.VRead("Solarkollektortemperatur~0x6564")
-		if err != nil {
-			log.Errorf(err.Error())
-		}
-		fmt.Printf("Solarkollektortemperatur~0x6564: %v\n", f)
-
-		for i = 0; i < 0; i++ {
-			c, err := conn.VRead("ecnsysEventType~Error")
-			if err != nil {
-				log.Errorf(err.Error())
-			}
-			fmt.Printf("ecnsysEventType~Error: %v\n", c)
-		}
-
-		// <-time.After(4 * time.Second)
-		// log.Errorf("Nö!")
-	*/
-	/*
-		id := [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f} // uuid.NewV4()
-
-		cmdChan <- FsmCmd{ID: id, Command: 0x02, Address: [2]byte{0x23, 0x23}, Args: []byte{0x01}, ResultLen: 1}
-		result = <-resChan
-		fmt.Printf("%# x, %#v\n", result.Body, result.Err)
-	*/
 }
