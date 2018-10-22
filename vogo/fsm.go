@@ -394,7 +394,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 			var err error
 			if canP300 {
 				state, err = waitfor(ENQ, swP300, reset)
-				if err == io.EOF {
+				if err != nil {
 					return err
 				}
 				lastEnq = time.Now()
@@ -417,7 +417,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 			if hasCmd {
 				if time.Now().Sub(lastEnq) > (1500 * time.Millisecond) {
 					state, err = waitfor(ENQ, sendKwStart, reset)
-					if err == io.EOF {
+					if err != nil {
 						return err
 					}
 				} else {
@@ -425,7 +425,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 				}
 			} else {
 				state, err = waitfor(ENQ, idle, reset)
-				if err == io.EOF {
+				if err != nil {
 					return err
 				}
 				lastEnq = time.Now()
@@ -433,7 +433,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 		case sendKwStart:
 			if prevstate != recvKw {
 				_, err := device.Write([]byte{0x01})
-				if err == io.EOF {
+				if err != nil {
 					return err
 				}
 			}
@@ -444,7 +444,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 
 			if err == nil {
 				_, err = device.Write(b)
-				if err == io.EOF {
+				if err != nil {
 					return err
 				}
 
@@ -457,7 +457,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 		case recvKw:
 			b, err := waitforbytes(int(cmd.ResultLen))
 			if err != nil {
-				if err == io.EOF || len(b) == 0 {
+				if err != nil || len(b) == 0 {
 					return err
 				}
 
@@ -495,7 +495,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 		case swP300:
 			// Emit sync packet / switch to P300
 			_, err := device.Write([]byte{SYN, NUL, NUL})
-			if err == io.EOF {
+			if err != nil {
 				return err
 			}
 			state = waitAck
@@ -507,7 +507,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 				state, err = waitfor(ACK, wait, reset)
 				canP300 = false
 			}
-			if err == io.EOF {
+			if err != nil {
 				return err
 			}
 
@@ -545,7 +545,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 			b, err := prepareCmd(&cmd, state)
 			if err == nil {
 				_, err = device.Write(b)
-				if err == io.EOF {
+				if err != nil {
 					return err
 				}
 				state = sendP300Ack
@@ -557,7 +557,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 		case sendP300Ack:
 			b, err := waitforbytes(1)
 			if err != nil {
-				if err == io.EOF || len(b) == 0 {
+				if err != nil || len(b) == 0 {
 					return err
 				}
 
@@ -587,7 +587,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 			// Get frame start (0x41) and frame length
 			telegramPart1, err := waitforbytes(2)
 			if err != nil {
-				if err == io.EOF {
+				if err != nil {
 					return err
 				}
 
@@ -607,7 +607,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 			l := int(telegramPart1[1])
 			telegramPart2, err := waitforbytes(l + 1)
 			if err != nil {
-				if err == io.EOF {
+				if err != nil {
 					return err
 				}
 
@@ -656,14 +656,14 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 			state = recvP300Ack
 		case recvP300Ack:
 			_, err := device.Write([]byte{ACK})
-			if err == io.EOF {
+			if err != nil {
 				return err
 			}
 			state = wait
 		case recvP300Nak:
 			// TODO: Drain receive buffer?
 			_, err := device.Write([]byte{NAK})
-			if err == io.EOF {
+			if err != nil {
 				return err
 			}
 
