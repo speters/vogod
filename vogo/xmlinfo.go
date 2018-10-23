@@ -286,11 +286,14 @@ func validatexEventType(xet xEventType) (EventType, error) {
 		et.Codec = dateBCDCodec{}
 	case "Sec2Hour":
 		et.Codec = sec2DurationCodec{}
+		et.Unit = "time.Duration"
 	case "Sec2Minute":
 		et.Codec = sec2DurationCodec{}
+		et.Unit = "time.Duration"
 	case "HourDiffSec2Hour":
 		// TODO: Check if this is correct
 		et.Codec = sec2DurationCodec{}
+		et.Unit = "time.Duration"
 	case "Div10":
 		et.Codec = divMulOffsetCodec{}
 		et.ConversionFactor = 1.0 / 10
@@ -333,8 +336,10 @@ func validatexEventType(xet xEventType) (EventType, error) {
 			switch et.MappingType {
 			case 1:
 				et.Codec = mappingTime53{}
+				et.Unit = "time.Duration"
 			case 2:
 				et.Codec = mappingRaster152{}
+				et.Unit = "time.Duration"
 			case 3:
 				et.Codec = mappingErrors{}
 			default:

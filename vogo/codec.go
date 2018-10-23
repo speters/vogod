@@ -434,10 +434,7 @@ func (sec2DurationCodec) Decode(et *EventType, b *[]byte) (v interface{}, err er
 
 	t = time.Duration(secs) * time.Second
 
-	c := (*b)
-	et.Codec.Encode(et, &c, t)
-
-	return t, nil
+	return t.String(), nil
 }
 func (sec2DurationCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error) {
 	var t time.Duration
@@ -450,8 +447,14 @@ func (sec2DurationCodec) Encode(et *EventType, b *[]byte, v interface{}) (err er
 	switch v.(type) {
 	case time.Duration:
 		t = v.(time.Duration)
+	case string:
+		var err error
+		t, err = time.ParseDuration(v.(string))
+		if err != nil {
+			return err
+		}
 	default:
-		return fmt.Errorf("Value must be a time.Duration type")
+		return fmt.Errorf("Value must be a time.Duration type or a string that is parseable by time.ParseDuration(string)")
 	}
 
 	secs = uint(t.Seconds())
