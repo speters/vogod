@@ -2,4 +2,5 @@ debug
 vogod
 *.prof
 .*json
+.vscode
 Makefile
