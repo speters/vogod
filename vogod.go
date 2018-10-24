@@ -30,8 +30,8 @@ var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 var conn *vogo.Device
 
 // To be set via go build -ldflags "-X main.buildVersion=$(date -u +%FT%TZ) -X main.buildDate=$(git describe --dirty)"
-var buildVersion string = "unspecified"
-var buildDate string = "unknown"
+var buildVersion = "unspecified"
+var buildDate = "unknown"
 
 var getSysDeviceIdent vogo.FsmCmd = vogo.FsmCmd{ID: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}, Command: 0x01, Address: [2]byte{0x00, 0xf8}, Args: nil, ResultLen: 8}
 
@@ -56,9 +56,9 @@ func versionInfo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	v := struct {
-		Version    string `json:"version"`
-		Build_date string `json:"build_date"`
-	}{Version: buildVersion, Build_date: buildDate}
+		Version   string `json:"version"`
+		BuildDate string `json:"build_date"`
+	}{Version: buildVersion, BuildDate: buildDate}
 	j, _ := json.Marshal(v)
 	w.Write([]byte(j))
 }

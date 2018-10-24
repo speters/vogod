@@ -375,10 +375,10 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 				failCount++
 				if failCount > maxFail {
 					return fmt.Errorf("Too many fails: failCount=%d, resCnt=%d", failCount, resCnt)
-				} else {
-					<-time.After(3 * time.Second)
-					// allow Vitodens some time for recovering (observed Optolink deadlock when hammering)
 				}
+				// allow Vitodens some time for recovering (observed Optolink deadlock when hammering)
+				<-time.After(3 * time.Second)
+
 				state = reset
 			}
 		case resetP300:
