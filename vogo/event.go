@@ -13,6 +13,7 @@ type DataPointType struct {
 	EventTypes     EventTypeList   `json:"-"`
 }
 
+// SysDeviceIdentT holds the full system id of a device (type, hardware revision, software revision, ...)
 type SysDeviceIdentT [8]byte
 
 func (sdi SysDeviceIdentT) MarshalJSON() ([]byte, error) {

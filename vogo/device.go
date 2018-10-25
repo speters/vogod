@@ -186,6 +186,7 @@ func (o *Device) Connect(link string) error {
 	return nil
 }
 
+// Reconnect device
 func (o *Device) Reconnect() error {
 	o.Close()
 	close(o.cmdChan)

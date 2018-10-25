@@ -514,7 +514,7 @@ func fmtDuration53(d time.Duration) string {
 
 type mappingTime53 struct{}
 
-func Time532Duration(b byte) time.Duration {
+func time532Duration(b byte) time.Duration {
 	return (time.Duration(b>>3) * time.Hour) + (time.Duration(b&7) * time.Minute * 10)
 }
 
@@ -535,7 +535,7 @@ func (mappingTime53) Decode(et *EventType, b *[]byte) (v interface{}, err error)
 			if (*b)[i*chunkSize+j] == 255 || (*b)[i*chunkSize+j+1] == 255 {
 				break
 			}
-			t = onoff53{on: Time532Duration((*b)[i*chunkSize+j]), off: Time532Duration((*b)[i*chunkSize+j+1])}
+			t = onoff53{on: time532Duration((*b)[i*chunkSize+j]), off: time532Duration((*b)[i*chunkSize+j+1])}
 			d = append(d, t)
 		}
 		w = append(w, d)
