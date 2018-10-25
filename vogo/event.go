@@ -58,6 +58,7 @@ type EventType struct {
 	Value EventValueType `json:"value,omitempty"`
 }
 
+// AddressT is the type for addresses. It is introduced as an alias fpr uint16 to be able to implement MarshalJSON
 type AddressT uint16
 
 func (a AddressT) MarshalJSON() ([]byte, error) {
