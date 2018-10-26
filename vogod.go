@@ -259,6 +259,7 @@ func main() {
 		router.PathPrefix("/").Handler(fs)
 		//router.PathPrefix("/assets").Handler(http.StripPrefix("/assets/", fs))
 
+		// accept :[portnum] as well as [portnum]
 		if i, err := strconv.Atoi(*httpServe); err == nil {
 			*httpServe = fmt.Sprintf(":%d", i)
 		}
