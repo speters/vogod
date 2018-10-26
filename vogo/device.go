@@ -167,7 +167,7 @@ func (o *Device) Connect(link string) error {
 		o.conn.(*net.TCPConn).SetKeepAlivePeriod(30 * time.Second)
 	} else if (u.Scheme == "file") || (u.Scheme == "") {
 		// Connect via serial
-		o.conn, err = serial.OpenPort(&serial.Config{Name: u.Path, Baud: 4800, Size: 8, Parity: serial.ParityNone, StopBits: serial.Stop2})
+		o.conn, err = serial.OpenPort(&serial.Config{Name: u.Path, Baud: 4800, Size: 8, Parity: serial.ParityEven, StopBits: serial.Stop2})
 		if err != nil {
 			return err
 		}
