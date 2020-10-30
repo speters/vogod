@@ -6,7 +6,7 @@ _This is unreleased, alpha quality software, not ready for deployment. Do not us
 
 ## Usage
 ```
-./vogod: Vi*ssmann (r) optolink go daemon
+./vogod: V'mann optolink go daemon
     Build Date: 2020-10-30T15:38:36Z
     Build Version: v0.4.1
 
