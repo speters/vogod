@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-    "github.com/speters/vogod/vogo"
+	"github.com/speters/vogod/vogo"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -30,9 +30,11 @@ var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 var conn *vogo.Device
 
-// To be set via go build -ldflags "-X main.buildVersion=$(date -u +%FT%TZ) -X main.buildDate=$(git describe --dirty)"
+// To be set via go build -ldflags "-X main.buildDate=$(date -u +%FT%TZ) -X main.buildVersion=$(git describe --dirty)"
 var buildVersion = "unspecified"
 var buildDate = "unknown"
+
+const selfDesc = "Vi*ssmann (r) optolink go daemon"
 
 var getSysDeviceIdent vogo.FsmCmd = vogo.FsmCmd{ID: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}, Command: 0x01, Address: [2]byte{0x00, 0xf8}, Args: nil, ResultLen: 8}
 
@@ -142,6 +144,20 @@ func cliget(id string) (string, error) {
 }
 
 func main() {
+	var flagOut = os.Stderr // flag.Output()
+
+	flag.Usage = func() {
+		fmt.Fprintf(flagOut, "%s: %s\n", os.Args[0], selfDesc)
+		fmt.Fprintf(flagOut, "    Build Date: %s\n    Build Version: %s\n\n", buildDate, buildVersion)
+
+		/*
+			flag.VisitAll(func(f *flag.Flag) {
+				fmt.Fprintf(flagOut, "    %v\n", f.Usage) // f.Name, f.Value
+			})
+		*/
+		flag.PrintDefaults()
+	}
+
 	flag.Parse()
 
 	if *verbose == true {

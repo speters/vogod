@@ -1,6 +1,6 @@
 debug
-vogod
-vogod_*
+/vogod
+/vogod_*
 *.prof
 .*json
 .vscode
