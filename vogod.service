@@ -1,0 +1,14 @@
+[Unit]
+Description=vogod - V'mann optolink connector daemon
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/usr/share/vogod
+Restart=always
+RestartSec=15
+User=vogod
+ExecStart=/usr/local/bin/vogod -s 8000 -c /dev/ttyS1 -d /usr/share/vogod/ecnDataPointType.xml -e /usr/share/vogod/ecnEventType.xml
+
+[Install]
+WantedBy=multi-user.target

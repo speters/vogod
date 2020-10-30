@@ -4,6 +4,29 @@ package vogo
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[unknown-0]
+	_ = x[reset-1]
+	_ = x[resetAck-2]
+	_ = x[resetP300-3]
+	_ = x[resetP300Ack-4]
+	_ = x[idle-5]
+	_ = x[sendKwStart-6]
+	_ = x[sendKw-7]
+	_ = x[recvKw-8]
+	_ = x[swP300-9]
+	_ = x[waitAck-10]
+	_ = x[wait-11]
+	_ = x[sendP300-12]
+	_ = x[sendP300Ack-13]
+	_ = x[recvP300-14]
+	_ = x[recvP300Ack-15]
+	_ = x[recvP300Nak-16]
+}
+
 const _VitoState_name = "unknownresetresetAckresetP300resetP300AckidlesendKwStartsendKwrecvKwswP300waitAckwaitsendP300sendP300AckrecvP300recvP300AckrecvP300Nak"
 
 var _VitoState_index = [...]uint8{0, 7, 12, 20, 29, 41, 45, 56, 62, 68, 74, 81, 85, 93, 104, 112, 123, 134}
@@ -13,6 +36,31 @@ func (i VitoState) String() string {
 		return "VitoState(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
 	return _VitoState_name[_VitoState_index[i]:_VitoState_index[i+1]]
+}
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[nop-0]
+	_ = x[p300ReadData-1]
+	_ = x[p300WriteData-2]
+	_ = x[p300FunctionCall-7]
+	_ = x[kwRead-247]
+	_ = x[kwWrite-244]
+	_ = x[virtualRead-199]
+	_ = x[virtualWrite-196]
+	_ = x[physicalRead-203]
+	_ = x[physicalWrite-200]
+	_ = x[eepromRead-174]
+	_ = x[eepromWrite-173]
+	_ = x[physicalXramRead-197]
+	_ = x[physicalXramWrite-195]
+	_ = x[physicalPortRead-110]
+	_ = x[physicalPortWrite-109]
+	_ = x[physicalBeRead-158]
+	_ = x[physicalBeWrite-157]
+	_ = x[physicalKmbusRAMRead-51]
+	_ = x[physicalKmBusEepromRead-67]
 }
 
 const _CommandType_name = "nopp300ReadDatap300WriteDatap300FunctionCallphysicalKmbusRAMReadphysicalKmBusEepromReadphysicalPortWritephysicalPortReadphysicalBeWritephysicalBeReadeepromWriteeepromReadphysicalXramWritevirtualWritephysicalXramReadvirtualReadphysicalWritephysicalReadkwWritekwRead"

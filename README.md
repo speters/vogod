@@ -1,4 +1,4 @@
-# :fire: vogod - V'mann optolink gonnecteur
+# :fire: vogod - V'mann optolink go daemon
 
 `vogod` is a daemon which provides a high-level interface (currently a REST API) to a Viessmann® heating device via Optolink.
 
