@@ -24,6 +24,7 @@ var etFile = flag.String("e", "ecnEventType.xml", "filename of ecnEventType.xml 
 var httpServe = flag.String("s", "", "start http server at [bindtohost][:]port")
 var connTo = flag.String("c", "", "connection string, use socket://[host]:[port] for TCP or [serialDevice] for direct serial connection ")
 var verbose = flag.Bool("v", false, "verbose logging")
+var startTime time.Time
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
@@ -61,7 +62,8 @@ func versionInfo(w http.ResponseWriter, r *http.Request) {
 	v := struct {
 		Version   string `json:"version"`
 		BuildDate string `json:"build_date"`
-	}{Version: buildVersion, BuildDate: buildDate}
+		Uptime    string `json:"uptime"`
+	}{Version: buildVersion, BuildDate: buildDate, Uptime: fmt.Sprintf("%s", time.Since(startTime))}
 	j, _ := json.Marshal(v)
 	w.Write([]byte(j))
 }
@@ -145,6 +147,7 @@ func cliget(id string) (string, error) {
 
 func main() {
 	var flagOut = os.Stderr // flag.Output()
+	startTime = time.Now()
 
 	flag.Usage = func() {
 		fmt.Fprintf(flagOut, "%s: %s\n", os.Args[0], selfDesc)
