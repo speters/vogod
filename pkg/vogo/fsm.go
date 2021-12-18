@@ -289,6 +289,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 			return nextState, err
 		}
 		log.Warnf("Received unexpected byte sequence %x (expected %x)", b, w)
+		failCount++
 		return failState, err
 	}
 
