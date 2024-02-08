@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"runtime"
 	"runtime/pprof"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -145,6 +147,19 @@ func cliget(id string) (string, error) {
 	return string(bs), err
 }
 
+func avahiPublish(apName string, apService string, apPort int) {
+	cmd := exec.Command(
+		"avahi-publish",
+		"-s",
+		apName,
+		apService,
+		strconv.Itoa(apPort))
+	if err := cmd.Run(); err != nil {
+		// close program if broadcast fails
+		log.Info(err)
+	}
+}
+
 func main() {
 	var flagOut = os.Stderr // flag.Output()
 	startTime = time.Now()
@@ -264,6 +279,7 @@ func main() {
 
 	var h *http.Server
 	var router *mux.Router
+
 	if *httpServe != "" {
 		router = mux.NewRouter()
 
@@ -282,6 +298,19 @@ func main() {
 		// accept :[portnum] as well as [portnum]
 		if i, err := strconv.Atoi(*httpServe); err == nil {
 			*httpServe = fmt.Sprintf(":%d", i)
+		}
+
+		s := strings.Split(*httpServe, ":")
+		if len(s) == 2 {
+			if port, err := strconv.Atoi(s[1]); err == nil {
+				host, _ := os.Hostname()
+				if len(s[0]) > 0 {
+					host = s[0]
+				}
+				instance := fmt.Sprintf("vogod_%s", conn.DataPoint.ID)
+				go avahiPublish(instance, "_http._tcp", port)
+				log.Infof("Started avahi-publish on %s", host)
+			}
 		}
 
 		h = &http.Server{Addr: *httpServe, Handler: router}
