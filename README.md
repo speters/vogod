@@ -9,8 +9,8 @@ _This is beta quality software, not ready for deployment. Do not use, do not ing
 ## Usage
 ```
 ./vogod: V'mann optolink go daemon
-    Build Date: 2024-02-08T18:51:11Z
-    Build Version: v0.4.1-4
+    Build Date: 2024-02-08T18:57:00Z
+    Build Version: v0.4.1-5-g3286411
 
   -c string
         connection string, use socket://[host]:[port] for TCP or [serialDevice] for direct serial connection
