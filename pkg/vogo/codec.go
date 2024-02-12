@@ -86,7 +86,7 @@ func (valueListCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error
 	case uint64:
 		d = uint16(v.(uint64))
 	default:
-		return fmt.Errorf("Value must be a basic numeric type")
+		return fmt.Errorf("value must be a basic numeric type")
 	}
 
 	if et.BitLength > 0 {
@@ -211,7 +211,7 @@ func (divMulOffsetCodec) Encode(et *EventType, b *[]byte, v interface{}) (err er
 	case uint64:
 		f = float32(v.(uint64))
 	default:
-		return fmt.Errorf("Value must be a basic numeric type")
+		return fmt.Errorf("value must be a basic numeric type")
 	}
 
 	if et.LowerBorder != et.UpperBorder {
@@ -304,7 +304,7 @@ func decodeBCDDate(c []byte) (t time.Time, err error) {
 
 func (dateTimeBCDCodec) Decode(et *EventType, b *[]byte) (v interface{}, err error) {
 	if len(*b) < int(et.BlockLength) {
-		return nil, fmt.Errorf("Could not decode: data length does not match BlockLength")
+		return nil, fmt.Errorf("could not decode: data length does not match BlockLength")
 	}
 
 	c := (*b)[et.BytePosition : et.BytePosition+et.ByteLength]
@@ -315,7 +315,7 @@ func (dateTimeBCDCodec) Encode(et *EventType, b *[]byte, v interface{}) (err err
 	var t time.Time
 
 	if len(*b) < int(et.BytePosition)+8 {
-		return fmt.Errorf("Could not encode: data length does not fit")
+		return fmt.Errorf("could not encode: data length does not fit")
 	}
 
 	switch v.(type) {
@@ -324,7 +324,7 @@ func (dateTimeBCDCodec) Encode(et *EventType, b *[]byte, v interface{}) (err err
 	default:
 		t, err = time.Parse(time.RFC3339, v.(string))
 		if err != nil {
-			return fmt.Errorf("Time parse error: need time.Time type or a parseable string")
+			return fmt.Errorf("time parse error: need time.Time type or a parseable string")
 		}
 	}
 
@@ -358,7 +358,7 @@ type dateBCDCodec struct{}
 
 func (dateBCDCodec) Decode(et *EventType, b *[]byte) (v interface{}, err error) {
 	if len(*b) < int(et.BlockLength) {
-		return nil, fmt.Errorf("Could not decode: data length does not match BlockLength")
+		return nil, fmt.Errorf("could not decode: data length does not match BlockLength")
 	}
 
 	c := (*b)[et.BytePosition : et.BytePosition+et.ByteLength]
@@ -369,7 +369,7 @@ func (dateBCDCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error) 
 	var t time.Time
 
 	if len(*b) < int(et.BytePosition)+4 {
-		return fmt.Errorf("Could not encode: data length does not fit")
+		return fmt.Errorf("could not encode: data length does not fit")
 	}
 
 	switch v.(type) {
@@ -378,7 +378,7 @@ func (dateBCDCodec) Encode(et *EventType, b *[]byte, v interface{}) (err error) 
 	default:
 		t, err = time.Parse(time.RFC3339, v.(string))
 		if err != nil {
-			return fmt.Errorf("Time parse error: need time.Time type or a parseable string")
+			return fmt.Errorf("time parse error: need time.Time type or a parseable string")
 		}
 	}
 
@@ -454,7 +454,7 @@ func (sec2DurationCodec) Encode(et *EventType, b *[]byte, v interface{}) (err er
 			return err
 		}
 	default:
-		return fmt.Errorf("Value must be a time.Duration type or a string that is parseable by time.ParseDuration(string)")
+		return fmt.Errorf("value must be a time.Duration type or a string that is parseable by time.ParseDuration(string)")
 	}
 
 	secs = uint(t.Seconds())
@@ -477,13 +477,13 @@ Vier Schaltfenster mit je einem Ein- u. Ausschaltpunkt.
 Speicherung der Zeiten im 5+3 Format (Stunde + 10-Minuten Raster)
 
 Beispiel:
-   ByteLength 56 / BlockFactor 7 (jeder Tag) = 8 = 4*2 Schaltfenster
-   byte[0] : Schaltfenster 0 an
-   byte[1] : Schaltfenster 0 aus
-   byte[2] : Schaltfenster 1 an
-   byte[3] : Schaltfenster 1 aus
-   ...
 
+	ByteLength 56 / BlockFactor 7 (jeder Tag) = 8 = 4*2 Schaltfenster
+	byte[0] : Schaltfenster 0 an
+	byte[1] : Schaltfenster 0 aus
+	byte[2] : Schaltfenster 1 an
+	byte[3] : Schaltfenster 1 aus
+	...
 */
 type onoff53 struct {
 	on  time.Duration
@@ -554,17 +554,19 @@ func (codec mappingTime53) MarshalJSON() ([]byte, error) {
 // Code mappingRaster152
 Timer 24h, für jede 1/4 Stunde 2 Bit.
 Werteliste:  0: Stand by
-            1: Reduziert
-            2: Normal
-            3: Festwert
+
+	1: Reduziert
+	2: Normal
+	3: Festwert
 
 Beispiel:
-    ByteLength 186 / BlockFactor 7 = 24
-    2 Bit je 15min
-    Bit 0,1 = 0min..<15min
-    Bit 2,3 = 15min..<30min
-    Bit 4,5 = 30min..<45min
-    Bit 6,7 = 45min..<60min
+
+	ByteLength 186 / BlockFactor 7 = 24
+	2 Bit je 15min
+	Bit 0,1 = 0min..<15min
+	Bit 2,3 = 15min..<30min
+	Bit 4,5 = 30min..<45min
+	Bit 6,7 = 45min..<60min
 */
 type mappingRaster152 struct{}
 
@@ -577,11 +579,11 @@ func (codec mappingRaster152) MarshalJSON() ([]byte, error) {
 
 /*
 // Codec mappingErrors
-   TODO: Format spec check
-   Fehlerhistorie
-   ByteLenght 90 / BlockFactor 10 =  9 Bytes / Eintrag
-   Byte 0 Fehler?, Bytes1..8 DateTimeBCD
 
+	TODO: Format spec check
+	Fehlerhistorie
+	ByteLenght 90 / BlockFactor 10 =  9 Bytes / Eintrag
+	Byte 0 Fehler?, Bytes1..8 DateTimeBCD
 */
 type mappingErrors struct{}
 

@@ -62,7 +62,7 @@ func (o *Device) Read(b []byte) (int, error) {
 	o.rlock.Lock()
 	defer o.rlock.Unlock()
 
-	if o.connected == false {
+	if !o.connected {
 		return 0, io.EOF
 	}
 
@@ -81,7 +81,7 @@ func (o *Device) Read(b []byte) (int, error) {
 func (o *Device) ReadByte() (byte, error) {
 	o.rlock.Lock()
 	defer o.rlock.Unlock()
-	if o.connected == false {
+	if !o.connected {
 		return 0, io.EOF
 	}
 	select {
@@ -97,7 +97,7 @@ func (o *Device) ReadByte() (byte, error) {
 func (o *Device) Peek(n int) ([]byte, error) {
 	o.rlock.Lock()
 	defer o.rlock.Unlock()
-	if o.connected == false {
+	if !o.connected {
 		return nil, io.EOF
 	}
 	select {
@@ -112,7 +112,7 @@ func (o *Device) Peek(n int) ([]byte, error) {
 func (o *Device) Write(b []byte) (int, error) {
 	o.wlock.Lock()
 	defer o.wlock.Unlock()
-	if o.connected == false {
+	if !o.connected {
 		return 0, io.EOF
 	}
 	select {
@@ -173,7 +173,7 @@ func (o *Device) Connect(link string) error {
 		}
 	} else {
 		o.connected = false
-		return fmt.Errorf("Can not find a valid connection string in \"%v\"", link)
+		return fmt.Errorf("can not find a valid connection string in \"%v\"", link)
 	}
 	o.connected = true
 	o.link = link

@@ -58,7 +58,7 @@ type xEventType struct {
 }
 
 // ErrNotFound is returned when data could not be found
-var ErrNotFound = errors.New("Not found")
+var ErrNotFound = errors.New("not found")
 
 // FindDataPointType reads DataPoint info from xml in a format similar to VitoSofts ecnDataPointType.xml format
 func FindDataPointType(xmlReader io.Reader, sysDeviceIdent [8]byte, dpt *DataPointType) error {
@@ -202,7 +202,7 @@ func validatexEventType(xet xEventType) (EventType, error) {
 	et.ID = xet.ID
 	i, err := strconv.ParseUint(xet.Address, 0, 16)
 	if err != nil {
-		return et, fmt.Errorf("Can't parse address '%v' of EventType %v", xet.Address, et.ID)
+		return et, fmt.Errorf("can't parse address '%v' of EventType %v", xet.Address, et.ID)
 	}
 	et.Address = AddressT(i)
 
@@ -325,9 +325,9 @@ func validatexEventType(xet xEventType) (EventType, error) {
 			et.ConversionFactor = 1.0
 		}
 	case "MultOffsetBCD":
-		err = fmt.Errorf("Can't handle %v Conversion in EventType %v", et.Conversion, et.ID)
+		err = fmt.Errorf("can't handle %v Conversion in EventType %v", et.Conversion, et.ID)
 	case "MultOffsetFloat":
-		err = fmt.Errorf("Can't handle %v Conversion in EventType %v", et.Conversion, et.ID)
+		err = fmt.Errorf("can't handle %v Conversion in EventType %v", et.Conversion, et.ID)
 
 	case "NoConversion":
 		if len(et.ValueList) > 0 {
@@ -358,7 +358,7 @@ func validatexEventType(xet xEventType) (EventType, error) {
 		}
 	default:
 		//et.Codec = nopCodec{}
-		err = fmt.Errorf("Can't handle %v Conversion in EventType %v", et.Conversion, et.ID)
+		err = fmt.Errorf("can't handle %v conversion in EventType %v", et.Conversion, et.ID)
 
 	}
 
