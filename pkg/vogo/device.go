@@ -31,6 +31,7 @@ type Device struct {
 	resChan  chan FsmResult
 	cmdLock  sync.Mutex
 	cmdWLock sync.Mutex
+	wg       sync.WaitGroup
 }
 
 const cacheDuration = 3 * time.Second
@@ -181,6 +182,7 @@ func (o *Device) Connect(link string) error {
 	o.Done = make(chan struct{})
 	o.r = bufio.NewReader(o.conn)
 
+	o.wg.Add(1)
 	go o.vitoFsm()
 
 	return nil
@@ -189,6 +191,7 @@ func (o *Device) Connect(link string) error {
 // Reconnect device
 func (o *Device) Reconnect() error {
 	o.Close()
+	o.wg.Wait()
 	close(o.cmdChan)
 	close(o.resChan)
 	o.cmdChan = make(chan FsmCmd)

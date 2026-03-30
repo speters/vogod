@@ -215,6 +215,8 @@ func prepareCmd(cmd *FsmCmd, state VitoState) (b []byte, err error) {
 
 // VitoFsm handles the state machine for the KW and P300 protocols
 func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-chan byte, outChan chan<- byte) {
+	defer device.wg.Done()
+
 	var state, prevstate VitoState
 	state, prevstate = unknown, unknown
 	lastSyn, lastEnq := time.Now(), time.Now()
