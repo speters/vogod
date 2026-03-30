@@ -3,9 +3,11 @@
 package main
 
 import (
+	"embed"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/exec"
@@ -22,6 +24,9 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
+
+//go:embed web/*
+var webFS embed.FS
 
 var dpFile = flag.String("d", "ecnDataPointType.xml", "filename of ecnDataPointType.xml like `file`")
 var etFile = flag.String("e", "ecnEventType.xml", "filename of ecnEventType.xml like `file`")
@@ -403,11 +408,8 @@ func main() {
 		router.HandleFunc("/raw/{addr:0x[0-9a-fA-F]+|[0-9]+}/{len:0x[0-9a-fA-F]+|[0-9]+}", getRaw).Methods("GET")
 		router.HandleFunc("/raw/{addr:0x[0-9a-fA-F]+|[0-9]+}", setRaw).Methods("POST")
 
-		//box := packr.NewBox("./web/")
-		// router.Handle("/b", http.FileServer(box))
-		fs := http.FileServer(http.Dir("./web"))
-		router.PathPrefix("/").Handler(fs)
-		//router.PathPrefix("/assets").Handler(http.StripPrefix("/assets/", fs))
+		webSub, _ := fs.Sub(webFS, "web")
+		router.PathPrefix("/").Handler(http.FileServer(http.FS(webSub)))
 
 		// accept :[portnum] as well as [portnum]
 		if i, err := strconv.Atoi(*httpServe); err == nil {
