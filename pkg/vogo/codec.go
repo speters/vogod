@@ -272,13 +272,13 @@ func (divMulOffsetCodec) Encode(et *EventType, b *[]byte, v interface{}) (err er
 			(*b)[et.BytePosition] = byte(d & 0xff)
 			(*b)[et.BytePosition+1] = byte((d >> 8) & 0xff)
 			(*b)[et.BytePosition+2] = byte((d >> 16) & 0xff)
-			(*b)[et.BytePosition+2] = byte((d >> 24) & 0xff)
+			(*b)[et.BytePosition+3] = byte((d >> 24) & 0xff)
 		} else {
 			d := uint32(f)
 			(*b)[et.BytePosition] = byte(d & 0xff)
 			(*b)[et.BytePosition+1] = byte((d >> 8) & 0xff)
 			(*b)[et.BytePosition+2] = byte((d >> 16) & 0xff)
-			(*b)[et.BytePosition+2] = byte((d >> 24) & 0xff)
+			(*b)[et.BytePosition+3] = byte((d >> 24) & 0xff)
 		}
 	default:
 		return fmt.Errorf("dateDivMulOffsetCodec: can not convert ByteLength %v", et.ByteLength)
