@@ -243,18 +243,22 @@ func (divMulOffsetCodec) Encode(et *EventType, b *[]byte, v interface{}) (err er
 			}
 		}
 	case 2:
-		var d interface{}
-		d = uint16(f)
-
-		if et.Parameter == "SInt" || et.Parameter == "SIntHighByteFirst" {
-			d = int16(f)
-		}
-		if et.Parameter == "SIntHighByteFirst" || et.Parameter == "IntHighByteFirst" {
-			(*b)[et.BytePosition+1] = byte(d.(int16) & 0xff)
-			(*b)[et.BytePosition] = byte(d.(int16) >> 8)
+		if et.Parameter == "SIntHighByteFirst" {
+			sd := int16(f)
+			(*b)[et.BytePosition+1] = byte(sd & 0xff)
+			(*b)[et.BytePosition] = byte(sd >> 8)
+		} else if et.Parameter == "IntHighByteFirst" {
+			ud := uint16(f)
+			(*b)[et.BytePosition+1] = byte(ud & 0xff)
+			(*b)[et.BytePosition] = byte(ud >> 8)
+		} else if et.Parameter == "SInt" {
+			sd := int16(f)
+			(*b)[et.BytePosition] = byte(sd & 0xff)
+			(*b)[et.BytePosition+1] = byte(sd >> 8)
 		} else {
-			(*b)[et.BytePosition] = byte(d.(uint16) & 0xff)
-			(*b)[et.BytePosition+1] = byte(d.(uint16) >> 8)
+			ud := uint16(f)
+			(*b)[et.BytePosition] = byte(ud & 0xff)
+			(*b)[et.BytePosition+1] = byte(ud >> 8)
 		}
 
 	case 3:
