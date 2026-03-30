@@ -35,6 +35,12 @@ var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 var conn *vogo.Device
 
+func httpError(w http.ResponseWriter, code int, msg string) {
+	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+	w.WriteHeader(code)
+	w.Write([]byte(msg))
+}
+
 // To be set via go build -ldflags "-X main.buildDate=$(date -u +%FT%TZ) -X main.buildVersion=$(git describe --dirty)"
 var buildVersion = "unspecified"
 var buildDate = "unknown"
@@ -83,16 +89,12 @@ func getEvent(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	et, ok := conn.DataPoint.EventTypes[params["id"]]
 	if !ok {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(fmt.Sprintf("No such EventType %v", params["id"])))
+		httpError(w, http.StatusNotFound, fmt.Sprintf("No such EventType %v", params["id"]))
 		return
 	}
 	b, err := conn.VRead(params["id"])
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-		w.Write([]byte(err.Error()))
-		w.Write([]byte(fmt.Sprintf("\n\n%#v", et)))
+		httpError(w, http.StatusInternalServerError, fmt.Sprintf("%s\n\n%#v", err, et))
 		return
 	}
 
@@ -111,8 +113,7 @@ func setEvent(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	et, ok := conn.DataPoint.EventTypes[params["id"]]
 	if !ok {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(fmt.Sprintf("No such EventType %v", params["id"])))
+		httpError(w, http.StatusNotFound, fmt.Sprintf("No such EventType %v", params["id"]))
 		return
 	}
 
@@ -121,19 +122,13 @@ func setEvent(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&val)
 
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-		w.Write([]byte(err.Error()))
-		w.Write([]byte(fmt.Sprintf("\n\n%#v", et)))
+		httpError(w, http.StatusInternalServerError, fmt.Sprintf("%s\n\n%#v", err, et))
 		return
 	}
 	et.Value = val
 	err = conn.VWrite(et.ID, val)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-		w.Write([]byte(err.Error()))
-		w.Write([]byte(fmt.Sprintf("\n\n%#v", et)))
+		httpError(w, http.StatusInternalServerError, fmt.Sprintf("%s\n\n%#v", err, et))
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -146,8 +141,7 @@ func getRaw(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	_, ok := params["addr"]
 	if !ok {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(fmt.Sprintf("No addr given")))
+		httpError(w, http.StatusNotFound, "No addr given")
 		return
 	}
 	var addr int32
@@ -160,9 +154,7 @@ func getRaw(w http.ResponseWriter, r *http.Request) {
 		addr64, err = strconv.ParseInt(params["addr"], 10, 16)
 	}
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-		w.Write([]byte(err.Error()))
+		httpError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	addr = int32(addr64)
@@ -180,9 +172,7 @@ func getRaw(w http.ResponseWriter, r *http.Request) {
 			len64, err = strconv.ParseInt(params["len"], 10, 8)
 		}
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-			w.Write([]byte(err.Error()))
+			httpError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		len = byte(len64)
@@ -196,9 +186,7 @@ func getRaw(w http.ResponseWriter, r *http.Request) {
 	res = conn.RawCmd(rawCmd)
 
 	if res.Err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-		w.Write([]byte(res.Err.Error()))
+		httpError(w, http.StatusInternalServerError, res.Err.Error())
 		return
 	}
 
@@ -212,10 +200,8 @@ func getRaw(w http.ResponseWriter, r *http.Request) {
 
 // set raw data in memory
 func setRaw(w http.ResponseWriter, r *http.Request) {
-
-	w.WriteHeader(http.StatusInternalServerError)
-	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-	w.Write([]byte("not implemented"))
+	httpError(w, http.StatusNotImplemented, "not implemented")
+	// TODO: this premature return is intentional to prevent potentially harmful interaction with the heating device, will decide later if we enable
 	return
 
 	params := mux.Vars(r)
