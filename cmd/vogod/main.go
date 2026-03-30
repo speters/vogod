@@ -177,7 +177,7 @@ func getRaw(w http.ResponseWriter, r *http.Request) {
 		if params["len"][:2] == "0x" {
 			len64, err = strconv.ParseInt(params["len"][2:], 16, 8)
 		} else {
-			len64, err = strconv.ParseInt(params["addr"], 10, 8)
+			len64, err = strconv.ParseInt(params["len"], 10, 8)
 		}
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
