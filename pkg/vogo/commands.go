@@ -81,6 +81,7 @@ func (o *Device) RawCmds(cmds ...FsmCmd) (ress []FsmResult) {
 			} else {
 				cmd.ResultLen = byte(remainder)
 			}
+			cmd.Address = addr2Bytes(addr)
 			select {
 			case o.cmdChan <- cmd:
 				break
