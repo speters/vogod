@@ -8,23 +8,26 @@ _This is beta quality software, not ready for deployment. Do not use, do not ing
 
 ## Usage
 ```
+ ./vogod -h
 ./vogod: V'mann optolink go daemon
-    Build Date: 2024-02-08T18:57:00Z
-    Build Version: v0.4.1-5-g3286411
+    Build Date: 2026-03-30T15:00:00Z
+    Build Version: v0.4.4
 
   -c string
-        connection string, use socket://[host]:[port] for TCP or [serialDevice] for direct serial connection
+    	connection string, use socket://[host]:[port] for TCP or [serialDevice] for direct serial connection
   -cpuprofile file
-        write cpu profile to file
+    	write cpu profile to file
   -d file
-        filename of ecnDataPointType.xml like file (default "ecnDataPointType.xml")
+    	filename of ecnDataPointType.xml like file (default "ecnDataPointType.xml")
   -e file
-        filename of ecnEventType.xml like file (default "ecnEventType.xml")
+    	filename of ecnEventType.xml like file (default "ecnEventType.xml")
   -memprofile file
-        write memory profile to file
+    	write memory profile to file
   -s string
-        start http server at [bindtohost][:]port
-  -v    verbose logging
+    	start http server at [bindtohost][:]port
+  -v	verbose logging
+  -webroot dir
+    	serve web UI from dir instead of embedded files
 ```
 
 ![bildschirmfoto vom 2018-10-26 um 15 47 46](https://user-images.githubusercontent.com/1384994/47570842-6bcfa880-d937-11e8-973f-54bb8b14c9c1.png)
