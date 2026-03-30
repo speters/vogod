@@ -32,10 +32,11 @@ const _VitoState_name = "unknownresetresetAckresetP300resetP300AckidlesendKwStar
 var _VitoState_index = [...]uint8{0, 7, 12, 20, 29, 41, 45, 56, 62, 68, 74, 81, 85, 93, 104, 112, 123, 134}
 
 func (i VitoState) String() string {
-	if i >= VitoState(len(_VitoState_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_VitoState_index)-1 {
 		return "VitoState(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _VitoState_name[_VitoState_index[i]:_VitoState_index[i+1]]
+	return _VitoState_name[_VitoState_index[idx]:_VitoState_index[idx+1]]
 }
 func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
