@@ -32,6 +32,7 @@ var dpFile = flag.String("d", "ecnDataPointType.xml", "filename of ecnDataPointT
 var etFile = flag.String("e", "ecnEventType.xml", "filename of ecnEventType.xml like `file`")
 var httpServe = flag.String("s", "", "start http server at [bindtohost][:]port")
 var connTo = flag.String("c", "", "connection string, use socket://[host]:[port] for TCP or [serialDevice] for direct serial connection ")
+var webRoot = flag.String("webroot", "", "serve web UI from `dir` instead of embedded files")
 var verbose = flag.Bool("v", false, "verbose logging")
 var startTime time.Time
 
@@ -408,8 +409,20 @@ func main() {
 		router.HandleFunc("/raw/{addr:0x[0-9a-fA-F]+|[0-9]+}/{len:0x[0-9a-fA-F]+|[0-9]+}", getRaw).Methods("GET")
 		router.HandleFunc("/raw/{addr:0x[0-9a-fA-F]+|[0-9]+}", setRaw).Methods("POST")
 
-		webSub, _ := fs.Sub(webFS, "web")
-		router.PathPrefix("/").Handler(http.FileServer(http.FS(webSub)))
+		var webHandler http.FileSystem
+		if *webRoot != "" {
+			if info, err := os.Stat(*webRoot); err == nil && info.IsDir() {
+				log.Infof("Serving web UI from %s", *webRoot)
+				webHandler = http.Dir(*webRoot)
+			} else {
+				log.Warnf("Webroot %s not accessible, falling back to embedded files", *webRoot)
+			}
+		}
+		if webHandler == nil {
+			webSub, _ := fs.Sub(webFS, "web")
+			webHandler = http.FS(webSub)
+		}
+		router.PathPrefix("/").Handler(http.FileServer(webHandler))
 
 		// accept :[portnum] as well as [portnum]
 		if i, err := strconv.Atoi(*httpServe); err == nil {
