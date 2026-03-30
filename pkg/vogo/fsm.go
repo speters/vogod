@@ -478,6 +478,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 				// Set returned Body value to contain length of written bytes, as in P300
 				b = []byte{byte(len(cmd.Args))}
 			}
+			prevID := cmd.ID
 			var ok bool
 			select {
 			case cmd, ok = <-device.cmdChan:
@@ -490,7 +491,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 				hasCmd = false
 				state = idle
 			}
-			device.resChan <- FsmResult{cmd.ID, err, b}
+			device.resChan <- FsmResult{prevID, err, b}
 			lastEnq = time.Now()
 		case swP300:
 			// Emit sync packet / switch to P300
