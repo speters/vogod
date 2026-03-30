@@ -148,7 +148,7 @@ func getRaw(w http.ResponseWriter, r *http.Request) {
 	var addr64 int64
 	var err error
 
-	if params["addr"][:2] == "0x" {
+	if strings.HasPrefix(params["addr"], "0x") {
 		addr64, err = strconv.ParseInt(params["addr"][2:], 16, 16)
 	} else {
 		addr64, err = strconv.ParseInt(params["addr"], 10, 16)
@@ -166,7 +166,7 @@ func getRaw(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		len = 1
 	} else {
-		if params["len"][:2] == "0x" {
+		if strings.HasPrefix(params["len"], "0x") {
 			len64, err = strconv.ParseInt(params["len"][2:], 16, 8)
 		} else {
 			len64, err = strconv.ParseInt(params["len"], 10, 8)
