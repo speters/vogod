@@ -125,8 +125,7 @@ func (e *EventTypeList) getEventTypeByID(ID string) (et *EventType, err error) {
 	return et, err
 }
 
-func (o *Device) newUUID() [16]byte {
-	var uuid [16]byte
+func NewUUID() (uuid [16]byte) {
 	for i := 0; i < 16; i++ {
 		uuid[i] = byte(rand.Uint32())
 	}
@@ -149,7 +148,7 @@ func (o *Device) VRead(ID string) (data interface{}, err error) {
 		step = et.BlockLength / et.BlockFactor
 	}
 
-	cmd := FsmCmd{ID: o.newUUID(), Command: et.FCRead, Address: addr2Bytes(et.Address), ResultLen: byte(step)}
+	cmd := FsmCmd{ID: NewUUID(), Command: et.FCRead, Address: addr2Bytes(et.Address), ResultLen: byte(step)}
 	var res FsmResult
 	b := []byte{}
 	for i := uint8(0); i < et.BlockLength; i += step {
@@ -192,7 +191,7 @@ func (o *Device) VWrite(ID string, data interface{}) (err error) {
 		step = et.BlockLength / et.BlockFactor
 	}
 
-	cmd := FsmCmd{ID: o.newUUID(), Command: et.FCRead, Address: addr2Bytes(et.Address), ResultLen: byte(step)}
+	cmd := FsmCmd{ID: NewUUID(), Command: et.FCRead, Address: addr2Bytes(et.Address), ResultLen: byte(step)}
 	var res FsmResult
 	b := []byte{}
 	for i := uint8(0); i < et.BlockLength; i += step {

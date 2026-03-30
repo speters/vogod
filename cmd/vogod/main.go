@@ -1,3 +1,5 @@
+// vogod: V'mann optolink go daemon
+
 package main
 
 import (
@@ -15,7 +17,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/speters/vogod/vogo"
+	"github.com/speters/vogod/pkg/vogo"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -39,10 +41,12 @@ var buildDate = "unknown"
 
 const selfDesc = "V'mann optolink go daemon"
 
+// raw command to identify the system
 var getSysDeviceIdent vogo.FsmCmd = vogo.FsmCmd{ID: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}, Command: 0x01, Address: [2]byte{0x00, 0xf8}, Args: nil, ResultLen: 8}
 
 // const testDeviceIdent = [8]byte{0x20, 0x92, 0x01, 0x07, 0x00, 0x00, 0x01, 0x5a}
 
+// list all EventTypes for http response
 func getEventTypes(w http.ResponseWriter, r *http.Request) {
 	e := json.NewEncoder(w)
 	e.SetIndent("", "    ")
@@ -51,6 +55,8 @@ func getEventTypes(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	e.Encode(conn.DataPoint.EventTypes)
 }
+
+// get DataPoint (a Viessmann term for a device like a boiler, heater) for http response
 func getDataPoint(w http.ResponseWriter, r *http.Request) {
 	e := json.NewEncoder(w)
 	e.SetIndent("", "    ")
@@ -58,6 +64,8 @@ func getDataPoint(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	e.Encode(conn.DataPoint)
 }
+
+// get version info of vogod for http response
 func versionInfo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
@@ -69,6 +77,8 @@ func versionInfo(w http.ResponseWriter, r *http.Request) {
 	j, _ := json.Marshal(v)
 	w.Write([]byte(j))
 }
+
+// get data of an "Event" (a Viessmann term for a data point) for http response
 func getEvent(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	et, ok := conn.DataPoint.EventTypes[params["id"]]
@@ -96,6 +106,7 @@ func getEvent(w http.ResponseWriter, r *http.Request) {
 	e.Encode(rEt)
 }
 
+// set data of an "Event" (a Viessmann term for a data point or an address in the heating device containing data) from a http request
 func setEvent(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	et, ok := conn.DataPoint.EventTypes[params["id"]]
@@ -130,10 +141,121 @@ func setEvent(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("\"OK\"\n"))
 }
 
+// get raw data like an operation on memory
+func getRaw(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	_, ok := params["addr"]
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(fmt.Sprintf("No addr given")))
+		return
+	}
+	var addr int32
+	var addr64 int64
+	var err error
+
+	if params["addr"][:2] == "0x" {
+		addr64, err = strconv.ParseInt(params["addr"][2:], 16, 16)
+	} else {
+		addr64, err = strconv.ParseInt(params["addr"], 10, 16)
+	}
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+		w.Write([]byte(err.Error()))
+		return
+	}
+	addr = int32(addr64)
+
+	var len byte
+	var len64 int64
+
+	_, ok = params["len"]
+	if !ok {
+		len = 1
+	} else {
+		if params["len"][:2] == "0x" {
+			len64, err = strconv.ParseInt(params["len"][2:], 16, 8)
+		} else {
+			len64, err = strconv.ParseInt(params["addr"], 10, 8)
+		}
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+			w.Write([]byte(err.Error()))
+			return
+		}
+		len = byte(len64)
+	}
+
+	var rawCmd vogo.FsmCmd = vogo.FsmCmd{ID: vogo.NewUUID(),
+		Command: 0x01,
+		Address: [2]byte{(byte(addr >> 8)), byte(addr & 0xff)}, Args: nil, ResultLen: len}
+
+	var res vogo.FsmResult
+	res = conn.RawCmd(rawCmd)
+
+	if res.Err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+		w.Write([]byte(res.Err.Error()))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
+	e := json.NewEncoder(w)
+	e.SetIndent("", "    ")
+
+	e.Encode(res.Body)
+}
+
+// set raw data in memory
+func setRaw(w http.ResponseWriter, r *http.Request) {
+
+	w.WriteHeader(http.StatusInternalServerError)
+	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+	w.Write([]byte("not implemented"))
+	return
+
+	params := mux.Vars(r)
+	et, ok := conn.DataPoint.EventTypes[params["id"]]
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(fmt.Sprintf("No such EventType %v", params["id"])))
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	var val interface{}
+	err := decoder.Decode(&val)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+		w.Write([]byte(err.Error()))
+		w.Write([]byte(fmt.Sprintf("\n\n%#v", et)))
+		return
+	}
+	et.Value = val
+	err = conn.VWrite(et.ID, val)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+		w.Write([]byte(err.Error()))
+		w.Write([]byte(fmt.Sprintf("\n\n%#v", et)))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("\"OK\"\n"))
+}
+
+// function for interactive retrieval of data
 func cliget(id string) (string, error) {
 	et, ok := conn.DataPoint.EventTypes[id]
 	if !ok {
-		return "", fmt.Errorf("No such EventType %v", id)
+		return "", fmt.Errorf("no such EventType %v", id)
 	}
 	b, err := conn.VRead(id)
 	if err != nil {
@@ -147,6 +269,8 @@ func cliget(id string) (string, error) {
 	return string(bs), err
 }
 
+// Bonjour/Zeroconf/mDNS publisher
+// TODO: remove dependency on exec.Command of "avahi-publish"
 func avahiPublish(apName string, apService string, apPort int) {
 	cmd := exec.Command(
 		"avahi-publish",
@@ -160,6 +284,7 @@ func avahiPublish(apName string, apService string, apPort int) {
 	}
 }
 
+// main func of vogod: V'mann optolink go daemon
 func main() {
 	var flagOut = os.Stderr // flag.Output()
 	startTime = time.Now()
@@ -288,6 +413,14 @@ func main() {
 		router.HandleFunc("/version", versionInfo).Methods("GET")
 		router.HandleFunc("/event/{id}", getEvent).Methods("GET")
 		router.HandleFunc("/event/{id}", setEvent).Methods("POST")
+		router.HandleFunc("/raw/{addr:[0-9]+}", getRaw).Methods("GET")
+		router.HandleFunc("/raw/0x{addr:[0-9a-fA-F]+}", getRaw).Methods("GET")
+		router.HandleFunc("/raw/{addr:[0-9]+}/{len:[0-9]+}", getRaw).Methods("GET")
+		router.HandleFunc("/raw/0x{addr:[0-9a-fA-F]+}/{len:[0-9]+}", getRaw).Methods("GET")
+		router.HandleFunc("/raw/{addr:[0-9]+}/0x{len:[0-9a-fA-F]+}", getRaw).Methods("GET")
+		router.HandleFunc("/raw/0x{addr:[0-9a-fA-F]+}/0x{len:[0-9a-fA-F]+}", getRaw).Methods("GET")
+		router.HandleFunc("/raw/{addr:[0-9]+}", setRaw).Methods("POST")
+		router.HandleFunc("/raw/0x{addr:[0-9a-fA-F]+}", setRaw).Methods("POST")
 
 		//box := packr.NewBox("./web/")
 		// router.Handle("/b", http.FileServer(box))
