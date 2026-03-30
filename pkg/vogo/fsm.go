@@ -457,7 +457,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 		case recvKw:
 			b, err := waitforbytes(int(cmd.ResultLen))
 			if err != nil {
-				if err != nil || len(b) == 0 {
+				if len(b) == 0 {
 					return err
 				}
 
@@ -587,7 +587,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 			// Get frame start (0x41) and frame length
 			telegramPart1, err := waitforbytes(2)
 			if err != nil {
-				if err != nil {
+				if len(telegramPart1) == 0 {
 					return err
 				}
 
@@ -607,7 +607,7 @@ func (device *Device) vitoFsm() (err error) { //, peer *io.ReadWriter, inChan <-
 			l := int(telegramPart1[1])
 			telegramPart2, err := waitforbytes(l + 1)
 			if err != nil {
-				if err != nil {
+				if len(telegramPart2) == 0 {
 					return err
 				}
 
